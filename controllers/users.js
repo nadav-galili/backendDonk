@@ -7,6 +7,7 @@ const storage = multer.diskStorage({
         cb(null, "uploads/");
     },
     filename: function (req, file, cb) {
+        console.log("🚀 ~ file: users.js:10 ~ file:", file);
         let ext = path.extname(file.originalname);
         let fileName = path.basename(file.originalname, ext);
         cb(null, fileName + "-" + Date.now() + ext);
@@ -21,10 +22,12 @@ const upload = multer({
 
 // Define the signup route handler
 exports.signup = function (req, res) {
+    console.log("🚀 ~ file: users.js:25 ~ res:", res);
+
     const { file } = req;
     console.log("File:", file);
     console.log("Body:", req.body);
-    res.json({ message: "File uploaded successfully" });
+    res.status(200).json({ message: "Signup successful." });
 };
 
 // Export the upload instance to be used in the router file
