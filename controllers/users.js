@@ -36,11 +36,13 @@ exports.signup = async function (req, res) {
         const newUser = await User.create({
             password: hashedPassword,
             nickName: nickName,
-            image: req.file.path ?? "user.png",
+            image: req.file?.path ?? "user.png",
         });
 
         const { file } = req;
-        console.log("File:", file);
+        if (file) {
+            console.log("File:", file);
+        }
         console.log("Body:", req.body);
 
         delete newUser.dataValues.password;
