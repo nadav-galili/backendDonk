@@ -8,22 +8,22 @@ const User = sequelize.define("users", {
         allowNull: false,
         primaryKey: true,
     },
-    email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
-    },
     password: {
         type: DataTypes.STRING,
         allowNull: false,
         validate: {
-            len: [7],
+            len: [4],
         },
         //minimum length 4 characters
     },
     nickName: {
         type: DataTypes.STRING,
         allowNull: true,
+        unique: true,
+        index: true,
+        validate: {
+            len: [2],
+        },
     },
     image: {
         type: DataTypes.STRING,

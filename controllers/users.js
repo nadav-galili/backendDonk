@@ -24,17 +24,16 @@ const upload = multer({
 });
 
 exports.signup = async function (req, res) {
-    const { email, password, nickName } = req.body;
+    const { password, nickName } = req.body;
 
     try {
-        const existingUser = await User.findOne({ where: { email: email } });
+        const existingUser = await User.findOne({ where: { nickName } });
         // console.log("🚀 ~ file: users.js:43 ~ existingUser:", existingUser);
         if (existingUser) {
             return res.status(400).json({ message: "User already exists." });
         }
         const hashedPassword = await bcrypt.hash(password, 12);
         const newUser = await User.create({
-            email: email,
             password: hashedPassword,
             nickName: nickName,
             image: req.file.path ?? "user.png",
