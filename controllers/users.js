@@ -1,5 +1,9 @@
 const multer = require("multer");
 const path = require("path");
+const express = require("express");
+const { body, validationResult } = require("express-validator");
+const bcrypt = require("bcrypt");
+const User = require("../models/user");
 
 // Define multer storage configuration
 const storage = multer.diskStorage({
@@ -7,7 +11,6 @@ const storage = multer.diskStorage({
         cb(null, "uploads/");
     },
     filename: function (req, file, cb) {
-        console.log("🚀 ~ file: users.js:10 ~ file:", file);
         let ext = path.extname(file.originalname);
         let fileName = path.basename(file.originalname, ext);
         cb(null, fileName + "-" + Date.now() + ext);
@@ -20,14 +23,34 @@ const upload = multer({
     limits: { fileSize: 10000000 },
 });
 
-// Define the signup route handler
-exports.signup = function (req, res) {
-    console.log("🚀 ~ file: users.js:25 ~ res:", res);
+exports.signup = async function (req, res) {
+    const { email, password, nickName } = req.body;
 
-    const { file } = req;
-    console.log("File:", file);
-    console.log("Body:", req.body);
-    res.status(200).json({ message: "Signup successful." });
+    try {
+        const existingUser = await User.findOne({ where: { email: email } });
+        // console.log("🚀 ~ file: users.js:43 ~ existingUser:", existingUser);
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists." });
+        }
+        const hashedPassword = await bcrypt.hash(password, 12);
+        const newUser = await User.create({
+            email: email,
+            password: hashedPassword,
+            nickName: nickName,
+            image: req.file.path ?? "user.png",
+        });
+
+        const { file } = req;
+        console.log("File:", file);
+        console.log("Body:", req.body);
+
+        delete newUser.dataValues.password;
+
+        res.status(200).json({ message: "Signup successful", user: newUser });
+    } catch (err) {
+        console.error("Error during signup:", err);
+        res.status(500).json({ message: "Internal server error." });
+    }
 };
 
 // Export the upload instance to be used in the router file
