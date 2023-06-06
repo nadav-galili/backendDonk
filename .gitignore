@@ -2,3 +2,5 @@ node_modules/
 uploads/
 db.js
 config.js
+config/
+```

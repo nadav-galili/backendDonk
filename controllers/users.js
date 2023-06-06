@@ -4,8 +4,10 @@ const express = require("express");
 const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
 const User = require("../models/user");
+const jwt = require("jsonwebtoken");
+const defaults = require("../utils/default.json");
 
-// Define multer storage configuration
+// Define multer storage utilsuration
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, "uploads/");
@@ -38,6 +40,10 @@ exports.signup = async function (req, res) {
             nickName: nickName,
             image: req.file?.path ?? "user.png",
         });
+        //generate token
+        const jwtKey = defaults.jwtKey;
+        const token = jwt.sign({ userId: newUser.id, nickName: newUser.nickName }, jwtKey);
+        newUser.dataValues.token = token;
 
         const { file } = req;
         if (file) {
