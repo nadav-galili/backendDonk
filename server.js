@@ -22,6 +22,7 @@ app.use("/api/auth", auth);
 app.use("/api/users", users);
 app.use("/api/leagues", leagues);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/teamAvatars", express.static(path.join(__dirname, "teamAvatars")));
 
 const PORT = process.env.PORT || 3030;
 app.listen(PORT, () => {
