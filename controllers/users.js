@@ -1,7 +1,5 @@
 const multer = require("multer");
 const path = require("path");
-const express = require("express");
-const { body, validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
 const User = require("../models/user");
 const jwt = require("jsonwebtoken");

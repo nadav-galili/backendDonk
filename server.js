@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const users = require("./routes/users");
+const leagues = require("./routes/leagues");
 const auth = require("./routes/auth");
 
 const mysql = require("mysql");
@@ -20,6 +21,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", auth);
 app.use("/api/users", users);
+app.use("/api/leagues", leagues);
 
 const PORT = process.env.PORT || 3030;
 app.listen(PORT, () => {

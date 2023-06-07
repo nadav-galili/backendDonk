@@ -10,6 +10,7 @@ module.exports = (req, res, next) => {
         req.user = decoded;
         next();
     } catch (ex) {
+        console.log("🚀 ~ file: auth.js:15 ~ ex:", ex);
         res.status(400).send("Invalid token.");
     }
 };
