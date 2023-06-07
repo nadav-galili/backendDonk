@@ -4,8 +4,7 @@ const cors = require("cors");
 const users = require("./routes/users");
 const leagues = require("./routes/leagues");
 const auth = require("./routes/auth");
-
-const mysql = require("mysql");
+const path = require("path");
 const app = express();
 
 app.use(cors());
@@ -22,6 +21,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", auth);
 app.use("/api/users", users);
 app.use("/api/leagues", leagues);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const PORT = process.env.PORT || 3030;
 app.listen(PORT, () => {

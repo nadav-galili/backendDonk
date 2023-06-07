@@ -1,8 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../db");
 
-const League = sequelize.define(
-    "League",
+const UserLeague = sequelize.define(
+    "UserLeague",
     {
         id: {
             type: DataTypes.INTEGER,
@@ -10,24 +10,28 @@ const League = sequelize.define(
             allowNull: false,
             primaryKey: true,
         },
-        league_name: {
-            type: DataTypes.STRING,
-            allowNull: false,
-        },
-        league_image: {
-            type: DataTypes.STRING,
-            allowNull: true,
-        },
-        admin_id: {
+        user_id: {
             type: DataTypes.INTEGER,
             allowNull: false,
         },
+        league_id: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+        },
+        is_admin: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+        },
     },
     {
+        sequelize,
+        modelName: "UserLeague",
+        tableName: "userleagues",
         timestamps: true,
         createdAt: "created_at",
         updatedAt: "updated_at",
     }
 );
 
-module.exports = League;
+module.exports = UserLeague;

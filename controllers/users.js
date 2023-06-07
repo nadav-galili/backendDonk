@@ -1,7 +1,7 @@
 const multer = require("multer");
 const path = require("path");
 const bcrypt = require("bcrypt");
-const User = require("../models/user");
+const UserModel = require("../models/User");
 const jwt = require("jsonwebtoken");
 const defaults = require("../utils/default.json");
 
@@ -27,16 +27,16 @@ exports.signup = async function (req, res) {
     const { password, nickName } = req.body;
 
     try {
-        const existingUser = await User.findOne({ where: { nickName } });
+        const existingUser = await UserModel.findOne({ where: { nickName } });
         // console.log("🚀 ~ file: users.js:43 ~ existingUser:", existingUser);
         if (existingUser) {
             return res.status(400).json({ message: "User already exists." });
         }
         const hashedPassword = await bcrypt.hash(password, 12);
-        const newUser = await User.create({
+        const newUser = await UserModel.create({
             password: hashedPassword,
             nickName: nickName,
-            image: req.file?.path ?? "user.png",
+            image: req.file?.path ?? "uploads/anonymos.png",
         });
         //generate token
         const jwtKey = defaults.jwtKey;
@@ -65,7 +65,7 @@ exports.me = async function (req, res) {
     try {
         const userId = req.user.userId;
 
-        const user = await User.findByPk(req.user.userId);
+        const user = await UserModel.findByPk(req.user.userId);
         if (!user) {
             return res.status(404).json({ message: "User not found." });
         }

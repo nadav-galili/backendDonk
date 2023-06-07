@@ -1,11 +1,11 @@
 const bcrypt = require("bcrypt");
-const User = require("../models/user");
+const UserModel = require("../models/User");
 const express = require("express");
 const router = express.Router();
 
 router.post("/", async (req, res) => {
     console.log("req.body", req.body);
-    let user = await User.findOne({ where: { nickName: req.body.nickName } });
+    let user = await UserModel.findOne({ where: { nickName: req.body.nickName } });
     console.log("🚀 ~ file: auth.js:10 ~ router.post ~ user:", user);
     if (!user) return res.status(400).send("Invalid nickName or password.");
 

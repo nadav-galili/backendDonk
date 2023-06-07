@@ -1,10 +1,17 @@
-const { DataTypes } = require("sequelize");
+const { Model, DataTypes } = require("sequelize");
 const sequelize = require("../db");
 const jwt = require("jsonwebtoken");
 const defaults = require("../utils/default.json");
 
-const User = sequelize.define(
-    "users",
+class User extends Model {
+    generateAuthToken() {
+        const token = jwt.sign({ userId: this.id, nickName: this.nickName }, defaults.jwtKey);
+        console.log("🚀 ~ file: user.js:55 ~ token:", token);
+        return token;
+    }
+}
+
+User.init(
     {
         id: {
             type: DataTypes.INTEGER,
@@ -18,7 +25,6 @@ const User = sequelize.define(
             validate: {
                 len: [4],
             },
-            //minimum length 4 characters
         },
         nickName: {
             type: DataTypes.STRING,
@@ -44,15 +50,13 @@ const User = sequelize.define(
         },
     },
     {
+        sequelize,
+        modelName: "User",
+        tableName: "users",
         timestamps: true,
         createdAt: "created_at",
         updatedAt: "updated_at",
     }
 );
 
-User.prototype.generateAuthToken = function () {
-    const token = jwt.sign({ userId: this.id, nickName: this.nickName }, defaults.jwtKey);
-    console.log("🚀 ~ file: user.js:55 ~ token:", token);
-    return token;
-};
 module.exports = User;
