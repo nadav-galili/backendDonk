@@ -8,5 +8,5 @@ const upload = userController.upload;
 router.post("/signup", upload.single("image"), userController.signup);
 
 //get my user info
-// router.get("/me", auth, userController.me);
+router.get("/me", auth, userController.me);
 module.exports = router;

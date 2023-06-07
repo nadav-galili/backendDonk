@@ -61,16 +61,20 @@ exports.signup = async function (req, res) {
 // Export the upload instance to be used in the router file
 exports.upload = upload;
 
-// exports.me = async function (req, res) {
-//     try {
-//         const user = await User.findByPk(req.user.userId);
-//         if (!user) {
-//             return res.status(404).json({ message: "User not found." });
-//         }
-//         delete user.dataValues.password;
-//         res.status(200).json({ message: "User found.", user });
-//     } catch (err) {
-//         console.error("Error during me:", err);
-//         res.status(500).json({ message: "Internal server error." });
-//     }
-// };
+exports.me = async function (req, res) {
+    try {
+        const userId = req.user.userId;
+
+        const user = await User.findByPk(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found." });
+        }
+        console.log("🚀 ~ file: users.js:69 ~ user:", user);
+        delete user.dataValues.password;
+        res.status(200).json({ message: "User found.", user });
+        // res.status(200).json({ message: "User found.", userId });
+    } catch (err) {
+        console.error("Error during me:", err);
+        res.status(500).json({ message: "Internal server error." });
+    }
+};
