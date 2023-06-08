@@ -2,8 +2,9 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const users = require("./routes/users");
-
-const mysql = require("mysql");
+const leagues = require("./routes/leagues");
+const auth = require("./routes/auth");
+const path = require("path");
 const app = express();
 
 app.use(cors());
@@ -17,21 +18,13 @@ app.get("/", (req, res) => {
     res.json({ message: "Welcome to myApp application." });
 });
 
+app.use("/api/auth", auth);
 app.use("/api/users", users);
+app.use("/api/leagues", leagues);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/leagueAvatars", express.static(path.join(__dirname, "leagueAvatars")));
 
 const PORT = process.env.PORT || 3030;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}.`);
 });
-
-// const db = mysql.createConnection({
-//     host: "localhost",
-//     user: "root",
-//     password: "",
-//     database: "",
-// });
-
-// db.connect((err) => {
-//     if (err) throw err;
-//     console.log("Connected to the database.");
-// });

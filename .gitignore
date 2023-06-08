@@ -1,2 +1,8 @@
 node_modules/
 uploads/
+teamAvatars/
+leagueAvatars/
+db.js
+config.js
+config/
+```
