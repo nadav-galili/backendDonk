@@ -4,6 +4,7 @@ const init = require("../models/init");
 const UserModel = require("../models/User");
 const UserLeague = require("../models/UserLeague");
 const Leaguemodel = require("../models/League");
+const { generateLeagueNumber } = require("../models/League");
 const multer = require("multer");
 const path = require("path");
 
@@ -69,6 +70,7 @@ exports.createLeague = async (req, res) => {
             league_name: leagueName,
             league_image: req.file?.path ?? "leagueAvatars/league.jpg",
             admin_id: userId,
+            league_number: await generateLeagueNumber(Leaguemodel),
         });
 
         const newUserLeague = await UserLeague.create({
