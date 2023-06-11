@@ -63,19 +63,20 @@ exports.createLeague = async (req, res) => {
         console.log("File:", file);
     }
     const { leagueName, userId } = req.body;
-    // res.status(200).json({ message: `created ${leagueName}` });
+
     try {
-        const existingLeague = await Leaguemodel.findOne({ where: { league_name: leagueName } });
-        console.log("🚀 ~ file: users.js:43 ~ existingUser:", existingLeague);
-        if (existingLeague) {
-            return res.status(400).json({ message: "League already exists." });
-        }
         const newLeague = await Leaguemodel.create({
             league_name: leagueName,
-            league_image: req.file?.path ?? "leagueAvatars/anonymos.png",
+            league_image: req.file?.path ?? "leagueAvatars/league.jpg",
             admin_id: userId,
         });
-        return res.status(200).json({ message: "League created", league: newLeague });
+
+        const newUserLeague = await UserLeague.create({
+            user_id: userId,
+            league_id: newLeague.id,
+            is_admin: true,
+        });
+        return res.status(200).json({ message: "League created", league: newLeague, userLeague: newUserLeague });
     } catch (err) {
         console.error("Error during create league:", err);
         res.status(500).json({ message: "Internal server error." });
