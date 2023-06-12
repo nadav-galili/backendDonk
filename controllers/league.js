@@ -2,8 +2,8 @@ const init = require("../models/init");
 // const User = require("../models/user");
 // const League = require("../models/league");
 const UserModel = require("../models/User");
-const UserLeague = require("../models/UserLeague");
-const Leaguemodel = require("../models/League");
+const UserLeagueModel = require("../models/UserLeague");
+const LeagueModel = require("../models/League");
 const { generateLeagueNumber } = require("../models/League");
 const multer = require("multer");
 const path = require("path");
@@ -31,29 +31,27 @@ exports.upload = upload;
 
 exports.myLeagues = async (req, res) => {
     const userId = req.params.userId;
-    try {
-        const user = await UserModel.findOne({
-            where: { id: userId },
-            include: [
-                {
-                    model: UserLeague,
-                    as: "userLeagues", // Make sure the alias matches the association alias
-                    include: [
-                        {
-                            model: Leaguemodel,
-                            as: "League",
-                        },
-                    ],
-                },
-            ],
+    UserModel.findAll({
+        include: [
+            {
+                model: UserLeagueModel,
+                as: "userLeagues",
+                include: [
+                    {
+                        model: LeagueModel,
+                        as: "league",
+                    },
+                ],
+            },
+        ],
+    })
+        .then((users) => {
+            console.log(users);
+            res.status(200).json(users);
+        })
+        .catch((error) => {
+            console.error(error);
         });
-
-        res.status(200).json(user.userLeagues);
-    } catch (error) {
-        // Handle error
-        console.error(error);
-        return null;
-    }
 };
 
 exports.createLeague = async (req, res) => {
@@ -73,7 +71,7 @@ exports.createLeague = async (req, res) => {
             league_number: await generateLeagueNumber(Leaguemodel),
         });
 
-        const newUserLeague = await UserLeague.create({
+        const newUserLeague = await UserLeagueModel.create({
             user_id: userId,
             league_id: newLeague.id,
             is_admin: true,
