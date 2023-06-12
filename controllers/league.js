@@ -31,7 +31,9 @@ exports.upload = upload;
 
 exports.myLeagues = async (req, res) => {
     const userId = req.params.userId;
-    UserModel.findAll({
+    const user = await UserModel.findAll({
+        where: { id: userId },
+        attributes: ["id", "nickName", "image"],
         include: [
             {
                 model: UserLeagueModel,
@@ -44,14 +46,26 @@ exports.myLeagues = async (req, res) => {
                 ],
             },
         ],
-    })
-        .then((users) => {
-            console.log(users);
-            res.status(200).json(users);
+    });
+
+    await Promise.all(
+        user.map(async (user) => {
+            await Promise.all(
+                user.dataValues.userLeagues.map(async (userLeague) => {
+                    const admin = await UserModel.findOne({
+                        attributes: ["id", "nickName", "image"],
+                        where: { id: userLeague.league.dataValues.admin_id },
+                    });
+                    userLeague.league.dataValues.leagueAdmin = admin;
+                })
+            );
         })
-        .catch((error) => {
-            console.error(error);
-        });
+    );
+
+    return res.status(200).json({
+        message: "Leagues found",
+        user,
+    });
 };
 
 exports.createLeague = async (req, res) => {
