@@ -3,6 +3,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const users = require("./routes/users");
 const leagues = require("./routes/leagues");
+const games = require("./routes/games");
 const auth = require("./routes/auth");
 const path = require("path");
 const app = express();
@@ -21,6 +22,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", auth);
 app.use("/api/users", users);
 app.use("/api/leagues", leagues);
+app.use("/api/games", games);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/leagueAvatars", express.static(path.join(__dirname, "leagueAvatars")));
 

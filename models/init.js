@@ -1,6 +1,7 @@
 const UserModel = require("./User");
 const LeagueModel = require("./League");
 const UserLeagueModel = require("./UserLeague");
+const GameModel = require("./Game");
 
 // Define associations
 UserModel.hasMany(UserLeagueModel, { foreignKey: "user_id", as: "userLeagues" });
@@ -16,6 +17,7 @@ LeagueModel.belongsToMany(UserModel, { through: UserLeagueModel, as: "users", fo
         await UserModel.sync({ force: false });
         await LeagueModel.sync({ force: false });
         await UserLeagueModel.sync({ force: false });
+        await GameModel.sync({ force: false });
         console.log("Tables synchronized successfully");
     } catch (error) {
         console.error("Error synchronizing tables:", error);

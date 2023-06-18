@@ -65,7 +65,7 @@ exports.myLeagues = async (req, res) => {
     let leaguePlayers = [];
     await Promise.all(
         (leaguePlayers = await UserLeagueModel.findAll({
-            where: { league_id: user[0].dataValues.userLeagues[0]?.league.dataValues.id },
+            where: { league_id: user[0].dataValues.userLeagues[0]?.league?.dataValues?.id },
             include: [
                 {
                     model: UserModel,
@@ -84,8 +84,6 @@ exports.myLeagues = async (req, res) => {
 };
 
 exports.createLeague = async (req, res) => {
-    console.log("🚀 ~ file: league.js:36 ~ exports.createLeague= ~ req:", req.body);
-
     const { file } = req;
     if (file) {
         console.log("File:", file);
@@ -97,7 +95,7 @@ exports.createLeague = async (req, res) => {
             league_name: leagueName,
             league_image: req.file?.path ?? "leagueAvatars/league.jpg",
             admin_id: userId,
-            league_number: await generateLeagueNumber(Leaguemodel),
+            league_number: await generateLeagueNumber(LeagueModel),
         });
 
         const newUserLeague = await UserLeagueModel.create({
@@ -140,33 +138,4 @@ exports.joinLeague = async (req, res) => {
     });
 
     return res.status(200).json({ message: "League joined", userLeague });
-
-    // const user = await UserModel.findOne({
-    //     where: { id: userId },
-    //     attributes: ["id", "nickName", "image"],
-    //     include: [
-    //         {
-    //             model: UserLeagueModel,
-    //             as: "userLeagues",
-    //             include: [
-    //                 {
-    //                     model: LeagueModel,
-    //                     as: "league",
-    //                 },
-    //             ],
-    //         },
-    //     ],
-    // });
-
-    // await Promise.all(
-    //     user.dataValues.userLeagues.map(async (userLeague) => {
-    //         const admin = await UserModel.findOne({
-    //             attributes: ["id", "nickName", "image"],
-    //             where: { id: userLeague.league?.dataValues.admin_id },
-    //         });
-    //         userLeague.league.dataValues.leagueAdmin = admin;
-    //     })
-    // );
-
-    // return res.status(200).json({ message: "League joined", userLeague, user });
 };
