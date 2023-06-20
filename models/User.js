@@ -6,7 +6,6 @@ const defaults = require("../utils/default.json");
 class User extends Model {
     generateAuthToken() {
         const token = jwt.sign({ userId: this.id, nickName: this.nickName }, defaults.jwtKey);
-        console.log("🚀 ~ file: user.js:55 ~ token:", token);
         return token;
     }
 }
