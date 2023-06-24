@@ -2,6 +2,7 @@ const GameModel = require("../models/Game");
 const UserGameModel = require("../models/UserGame");
 const GameDetailsModel = require("../models/GameDetails");
 const UserModel = require("../models/User");
+const Sequelize = require("sequelize");
 
 exports.newGame = async (req, res) => {
     const { selectedPlayers, selectedLeague } = req.body;
@@ -29,7 +30,6 @@ exports.newGame = async (req, res) => {
                         user_id: player,
                         game_id: game.id,
                     },
-                    // attributes: ["id", "user_id", "game_id", "league_id"],
                     include: [
                         {
                             model: UserModel,
@@ -72,4 +72,33 @@ exports.newGame = async (req, res) => {
     } catch (error) {
         console.error("Error creating game:", error);
     }
+};
+
+exports.addBuyInToPlayer = async (req, res) => {
+    console.log("🚀 ~ file: game.js ~ line 100 ~ exports.addBuyInToPlayer= ~ req.body", req.body);
+    const { gameId, playerId, buyInAmount, leagueId } = req.body;
+    const addBuyIn = await GameDetailsModel.create({
+        buy_in_amount: buyInAmount,
+        game_id: gameId,
+        user_id: playerId,
+        league_id: leagueId,
+    });
+
+    const userGamesUpdate = await UserGameModel.update(
+        {
+            buy_ins_amount: Sequelize.literal(`buy_ins_amount + 100`),
+            buy_ins_number: Sequelize.literal(`buy_ins_number + 1`),
+        },
+
+        {
+            where: {
+                user_id: playerId,
+                game_id: gameId,
+            },
+        }
+    );
+    console.log("🚀 ~ file: game.js:99 ~ exports.addBuyInToPlayer= ~ userGamesUpdate:", userGamesUpdate);
+
+    console.log("🚀 ~ file: game.js ~ line 108 ~ exports.addBuyInToPlayer= ~ addBuyIn", addBuyIn);
+    return res.status(200).json({ message: `Buy in added to player ${playerId} in game ${gameId}` });
 };
