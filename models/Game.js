@@ -23,7 +23,7 @@ const Games = sequelize.define(
     {
         sequelize,
         modelName: "Games",
-        tableName: "Games",
+        tableName: "games",
         timestamps: true,
         createdAt: "created_at",
         updatedAt: "updated_at",

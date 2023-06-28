@@ -13,7 +13,7 @@ exports.newGame = async (req, res) => {
             isOpen: true,
         });
 
-        const usersGames = [];
+        // const usersGames = [];
         const GameDetails = [];
 
         await Promise.all(
@@ -25,21 +25,21 @@ exports.newGame = async (req, res) => {
                 });
 
                 //get users data for userGame
-                const userGameUser = await UserGameModel.findOne({
-                    where: {
-                        user_id: player,
-                        game_id: game.id,
-                    },
-                    include: [
-                        {
-                            model: UserModel,
-                            as: "User",
-                            attributes: ["id", "nickName", "image"],
-                        },
-                    ],
-                });
+                // const userGameUser = await UserGameModel.findOne({
+                //     where: {
+                //         user_id: player,
+                //         game_id: game.id,
+                //     },
+                //     include: [
+                //         {
+                //             model: UserModel,
+                //             as: "User",
+                //             attributes: ["id", "nickName", "image"],
+                //         },
+                //     ],
+                // });
 
-                usersGames.push(userGameUser);
+                // usersGames.push(userGameUser);
 
                 const newGameDetails = await GameDetailsModel.create({
                     game_id: game.id,
@@ -68,14 +68,13 @@ exports.newGame = async (req, res) => {
                 GameDetails.push(newGameDetails);
             })
         );
-        return res.status(200).json({ message: `Game number ${game.id} created`, game, usersGames, GameDetails });
+        return res.status(200).json({ message: `Game number ${game.id} created`, game, GameDetails });
     } catch (error) {
         console.error("Error creating game:", error);
     }
 };
 
 exports.addBuyInToPlayer = async (req, res) => {
-    console.log("🚀 ~ file: game.js ~ line 100 ~ exports.addBuyInToPlayer= ~ req.body", req.body);
     const { gameId, playerId, buyInAmount, leagueId } = req.body;
     const addBuyIn = await GameDetailsModel.create({
         buy_in_amount: buyInAmount,
@@ -97,9 +96,18 @@ exports.addBuyInToPlayer = async (req, res) => {
             },
         }
     );
-    console.log("🚀 ~ file: game.js:99 ~ exports.addBuyInToPlayer= ~ userGamesUpdate:", userGamesUpdate);
 
-    console.log("🚀 ~ file: game.js ~ line 108 ~ exports.addBuyInToPlayer= ~ addBuyIn", addBuyIn);
+    const gameUpdate = await GameModel.update(
+        {
+            isOpen: 1,
+        },
+
+        {
+            where: {
+                id: gameId,
+            },
+        }
+    );
     return res.status(200).json({ message: `Buy in added to player ${playerId} in game ${gameId}` });
 };
 
@@ -117,9 +125,32 @@ exports.getUserGamesByGameId = async (req, res) => {
                 attributes: ["id", "nickName", "image"],
             },
         ],
-        group: ["user_id"],
     });
-    console.log("🚀 ~ file: game.js:122 ~ exports.getUserGamesByLeagueId= ~ userGames:", userGames);
 
     return res.status(200).json({ userGames });
+};
+
+exports.getGameDetails = async (req, res) => {
+    const { gameId } = req.params;
+
+    const gameDetails = await GameDetailsModel.findAll({
+        where: {
+            game_id: gameId,
+
+            buy_in_amount: {
+                [Sequelize.Op.ne]: 0,
+            },
+        },
+        include: [
+            {
+                model: UserModel,
+                as: "User",
+                attributes: ["id", "nickName", "image"],
+            },
+        ],
+        order: [["id", "DESC"]],
+    });
+    // console.log("🚀 ~ file: game.js:141 ~ exports.getGameDetails= ~ gameDetails:", gameDetails);
+
+    return res.status(200).json({ gameDetails });
 };
