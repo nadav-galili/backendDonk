@@ -102,3 +102,24 @@ exports.addBuyInToPlayer = async (req, res) => {
     console.log("🚀 ~ file: game.js ~ line 108 ~ exports.addBuyInToPlayer= ~ addBuyIn", addBuyIn);
     return res.status(200).json({ message: `Buy in added to player ${playerId} in game ${gameId}` });
 };
+
+exports.getUserGamesByGameId = async (req, res) => {
+    const { gameId } = req.params;
+
+    const userGames = await UserGameModel.findAll({
+        where: {
+            game_id: gameId,
+        },
+        include: [
+            {
+                model: UserModel,
+                as: "User",
+                attributes: ["id", "nickName", "image"],
+            },
+        ],
+        group: ["user_id"],
+    });
+    console.log("🚀 ~ file: game.js:122 ~ exports.getUserGamesByLeagueId= ~ userGames:", userGames);
+
+    return res.status(200).json({ userGames });
+};
