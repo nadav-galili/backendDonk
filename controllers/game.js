@@ -24,23 +24,6 @@ exports.newGame = async (req, res) => {
                     league_id: selectedLeague[0]?.league_id,
                 });
 
-                //get users data for userGame
-                // const userGameUser = await UserGameModel.findOne({
-                //     where: {
-                //         user_id: player,
-                //         game_id: game.id,
-                //     },
-                //     include: [
-                //         {
-                //             model: UserModel,
-                //             as: "User",
-                //             attributes: ["id", "nickName", "image"],
-                //         },
-                //     ],
-                // });
-
-                // usersGames.push(userGameUser);
-
                 const newGameDetails = await GameDetailsModel.create({
                     game_id: game.id,
                     league_id: selectedLeague[0]?.league_id,
@@ -85,7 +68,7 @@ exports.addBuyInToPlayer = async (req, res) => {
 
     const userGamesUpdate = await UserGameModel.update(
         {
-            buy_ins_amount: Sequelize.literal(`buy_ins_amount + 100`),
+            buy_ins_amount: Sequelize.literal(`buy_ins_amount + ${buyInAmount}`),
             buy_ins_number: Sequelize.literal(`buy_ins_number + 1`),
         },
 
@@ -150,7 +133,6 @@ exports.getGameDetails = async (req, res) => {
         ],
         order: [["id", "DESC"]],
     });
-    // console.log("🚀 ~ file: game.js:141 ~ exports.getGameDetails= ~ gameDetails:", gameDetails);
 
     return res.status(200).json({ gameDetails });
 };
