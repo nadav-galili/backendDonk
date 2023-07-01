@@ -136,3 +136,26 @@ exports.getGameDetails = async (req, res) => {
 
     return res.status(200).json({ gameDetails });
 };
+
+exports.cashOutPlayer = async (req, res) => {
+    const { userId, gameId, cashOutAmount } = req.body;
+    console.log("cashOutPlayer", req.body);
+
+    const userGamesUpdate = await UserGameModel.update(
+        {
+            cash_in_hand: cashOutAmount,
+            profit: Sequelize.literal(`${cashOutAmount}-buy_ins_amount `),
+            is_cashed_out: true,
+            cash_out_time: new Date(),
+        },
+
+        {
+            where: {
+                user_id: userId,
+                game_id: gameId,
+            },
+        }
+    );
+
+    res.status(200).json({ message: `Player ${userId} cashed out ${cashOutAmount} in game ${gameId}` });
+};
