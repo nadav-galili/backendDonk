@@ -159,3 +159,50 @@ exports.cashOutPlayer = async (req, res) => {
 
     res.status(200).json({ message: `Player ${userId} cashed out ${cashOutAmount} in game ${gameId}` });
 };
+
+exports.endGame = async (req, res) => {
+    const { gameId } = req.body;
+
+    const gameUpdate = await GameModel.update(
+        {
+            isOpen: 0,
+        },
+
+        {
+            where: {
+                id: gameId,
+            },
+        }
+    );
+
+    const userGames = await UserGameModel.findAll({
+        where: {
+            game_id: gameId,
+        },
+    });
+    console.log("🚀 ~ file: game.js:183 ~ exports.endGame= ~ userGames:", userGames);
+    const sortedUserGames = userGames.sort((a, b) => b.profit - a.profit);
+    sortedUserGames.forEach((userGame, index) => {
+        userGame.gameRank = index + 1;
+    });
+    // Step 4: Update the game ranks in the database
+    await Promise.all(
+        sortedUserGames.map(async (userGame) => {
+            await UserGameModel.update(
+                {
+                    game_rank: userGame.gameRank,
+                },
+
+                {
+                    where: {
+                        user_id: userGame.user_id,
+                        game_id: gameId,
+                    },
+                }
+            );
+        })
+    );
+
+    ///update season rank
+    res.status(200).json({ message: `Game ${gameId} ended` });
+};
