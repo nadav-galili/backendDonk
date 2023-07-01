@@ -10,6 +10,11 @@ const League = sequelize.define(
             allowNull: false,
             primaryKey: true,
         },
+        league_number: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            unique: true,
+        },
         league_name: {
             type: DataTypes.STRING,
             allowNull: false,
@@ -30,4 +35,18 @@ const League = sequelize.define(
     }
 );
 
+async function generateLeagueNumber(League) {
+    while (true) {
+        let randomNumber = Math.floor(Math.random() * (99999 - 1000 + 1)) + 1000;
+        let leagueNumber = randomNumber;
+        let leagueWithNumber = await League.findOne({
+            where: { league_number: leagueNumber },
+        });
+        if (!leagueWithNumber) {
+            return leagueNumber;
+        }
+    }
+}
+
 module.exports = League;
+module.exports.generateLeagueNumber = generateLeagueNumber;

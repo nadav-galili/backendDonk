@@ -6,7 +6,6 @@ const router = express.Router();
 router.post("/", async (req, res) => {
     console.log("req.body", req.body);
     let user = await UserModel.findOne({ where: { nickName: req.body.nickName } });
-    console.log("🚀 ~ file: auth.js:10 ~ router.post ~ user:", user);
     if (!user) return res.status(400).send("Invalid nickName or password.");
 
     const validPassword = await bcrypt.compare(req.body.password, user.password);
