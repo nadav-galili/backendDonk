@@ -7,6 +7,7 @@ const LeagueModel = require("../models/League");
 const { generateLeagueNumber } = require("../models/League");
 const multer = require("multer");
 const path = require("path");
+const { Sequelize } = require("sequelize");
 
 // Define multer storage utilsuration
 const storage = multer.diskStorage({
@@ -91,6 +92,7 @@ exports.myLeagues = async (req, res) => {
 
   return res.status(200).json({
     message: "Leagues found",
+    leagues: user[0].userLeagues,
     user,
     leaguePlayers,
   });
@@ -123,15 +125,18 @@ exports.createLeague = async (req, res) => {
     });
   } catch (err) {
     console.error("Error during create league:", err);
-    res.status(500).json({ message: "Internal server error." });
+    res.status(500).json({ error: "Internal server error." });
   }
 };
 
 exports.joinLeague = async (req, res) => {
   const { leagueNumber, userId } = req.params;
-  const league = await LeagueModel.findOne({
+  let league = await LeagueModel.findOne({
     where: { league_number: leagueNumber },
   });
+
+  console.log("🚀 ~ exports.joinLeague= ~ league:", league);
+
   if (!league) {
     return res.status(404).json({ message: "League number not found" });
   }
@@ -139,7 +144,7 @@ exports.joinLeague = async (req, res) => {
   if (league.dataValues.admin_id == userId) {
     return res
       .status(400)
-      .json({ message: "You are already the admin of this league" });
+      .json({ error: "You are already the admin of this league" });
   }
 
   const isUSerAlreadyInLeague = await UserLeagueModel.findOne({
@@ -147,7 +152,7 @@ exports.joinLeague = async (req, res) => {
   });
 
   if (isUSerAlreadyInLeague) {
-    return res.status(400).json({ message: "You are already in this league" });
+    return res.status(400).json({ error: "You are already in this league" });
   }
 
   const userLeague = await UserLeagueModel.create({
@@ -156,5 +161,18 @@ exports.joinLeague = async (req, res) => {
     is_admin: false,
   });
 
-  return res.status(200).json({ message: "League joined", userLeague });
+  const leaguePlayers = await UserLeagueModel.findAll({
+    where: { league_id: league.id },
+    include: [
+      {
+        model: UserModel,
+        attributes: ["id", "nickName", "image"],
+        as: "User",
+      },
+    ],
+  });
+
+  return res
+    .status(200)
+    .json({ message: "League joined", league, userLeague, leaguePlayers });
 };

@@ -90,6 +90,7 @@ exports.login = async function (req, res) {
 
   try {
     const existingUser = await UserModel.findOne({ where: { nickName } });
+    console.log("🚀 ~ existingUser:", existingUser);
 
     if (!existingUser) {
       return res.status(404).json({ error: "User not found." });
@@ -105,7 +106,11 @@ exports.login = async function (req, res) {
     //generate token
     const jwtKey = process.env.JWTKEY;
     const token = jwt.sign(
-      { userId: existingUser.id, nickName: existingUser.nickName },
+      {
+        userId: existingUser.id,
+        nickName: existingUser.nickName,
+        image: existingUser.image,
+      },
       jwtKey
     );
 

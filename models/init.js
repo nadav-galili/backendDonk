@@ -60,6 +60,8 @@ LeagueModel.hasMany(GameDetailsModel, {
   foreignKey: "league_id",
   as: "leagueGamesDetails",
 });
+// LeagueModel.belongsTo(UserModel, { foreignKey: "admin_id" }); // Add this line
+// UserModel.hasMany(LeagueModel, { as: "userLeagues" });
 
 // Sync models
 (async () => {
