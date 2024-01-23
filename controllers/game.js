@@ -2,32 +2,9 @@ const GameModel = require("../models/Game");
 const UserGameModel = require("../models/UserGame");
 const GameDetailsModel = require("../models/GameDetails");
 const UserModel = require("../models/User");
-const LeagueModel = require("../models/League");
+// const LeagueModel = require("../models/League");
 const Sequelize = require("sequelize");
 const gameUtils = require("../utils/gameUtils");
-
-// const createUserGame = async (player, game, leagueId) => {
-//   return await UserGameModel.create({
-//     user_id: player.user_id,
-//     game_id: game.id,
-//     league_id: leagueId,
-//   });
-// };
-
-// const createGameDetails = async (player, game, leagueId) => {
-//   return await GameDetailsModel.create({
-//     game_id: game.id,
-//     league_id: leagueId,
-//     user_id: player.user_id,
-//   });
-// };
-
-// const getUserData = async (playerId) => {
-//   return await UserModel.findOne({
-//     where: { id: playerId },
-//     attributes: ["id", "nickName", "image"],
-//   });
-// };
 
 exports.newGame = async (req, res) => {
   const { selectedPlayers, leagueId } = req.body;
@@ -79,41 +56,48 @@ exports.newGame = async (req, res) => {
 };
 exports.addBuyInToPlayer = async (req, res) => {
   const { gameId, playerId, buyInAmount, leagueId } = req.body;
-  const addBuyIn = await GameDetailsModel.create({
-    buy_in_amount: buyInAmount,
-    game_id: gameId,
-    user_id: playerId,
-    league_id: leagueId,
-  });
+  console.log("🚀 ~ exports.addBuyInToPlayer= ~ playerId:", playerId);
+  console.log("ww", typeof buyInAmount, buyInAmount);
 
-  const userGamesUpdate = await UserGameModel.update(
-    {
-      buy_ins_amount: Sequelize.literal(`buy_ins_amount + ${buyInAmount}`),
-      buy_ins_number: Sequelize.literal(`buy_ins_number + 1`),
-    },
-
-    {
-      where: {
-        user_id: playerId,
+  try {
+    await Promise.all([
+      GameDetailsModel.create({
+        buy_in_amount: buyInAmount,
         game_id: gameId,
-      },
-    }
-  );
+        user_id: playerId,
+        league_id: leagueId,
+      }),
+      UserGameModel.update(
+        {
+          buy_ins_amount: Sequelize.literal(`buy_ins_amount + ${buyInAmount}`),
+          buy_ins_number: Sequelize.literal(`buy_ins_number + 1`),
+        },
+        {
+          where: {
+            user_id: playerId,
+            game_id: gameId,
+          },
+        }
+      ),
+      GameModel.update(
+        {
+          isOpen: 1,
+        },
+        {
+          where: {
+            id: gameId,
+          },
+        }
+      ),
+    ]);
 
-  const gameUpdate = await GameModel.update(
-    {
-      isOpen: 1,
-    },
-
-    {
-      where: {
-        id: gameId,
-      },
-    }
-  );
-  return res
-    .status(200)
-    .json({ message: `Buy in added to player ${playerId} in game ${gameId}` });
+    return res.status(200).json({
+      message: `Buy in added to player ${playerId} in game ${gameId}`,
+    });
+  } catch (error) {
+    console.error("Error adding buy-in:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
 };
 
 exports.getUserGamesByGameId = async (req, res) => {
@@ -163,7 +147,7 @@ exports.cashOutPlayer = async (req, res) => {
   const { userId, gameId, cashOutAmount } = req.body;
   console.log("cashOutPlayer", req.body);
 
-  const userGamesUpdate = await UserGameModel.update(
+  await UserGameModel.update(
     {
       cash_in_hand: cashOutAmount,
       profit: Sequelize.literal(`${cashOutAmount}-buy_ins_amount `),
@@ -179,8 +163,15 @@ exports.cashOutPlayer = async (req, res) => {
     }
   );
 
+  const updatedUser = await UserModel.findOne({
+    where: {
+      id: userId,
+    },
+    attributes: ["nickName"],
+  });
+
   res.status(200).json({
-    message: `Player ${userId} cashed out ${cashOutAmount} in game ${gameId}`,
+    message: `Player ${updatedUser.nickName} cashed out ${cashOutAmount} in game ${gameId}`,
   });
 };
 
