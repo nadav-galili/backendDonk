@@ -176,13 +176,18 @@ exports.cashOutPlayer = async (req, res) => {
 };
 
 exports.endGame = async (req, res) => {
-  const { gameId } = req.body;
+  const { gameId, userGamesData } = req.body;
+  const allPlayersCashedOut = userGamesData.every(
+    (player) => player.is_cashed_out === true
+  );
+  if (!allPlayersCashedOut) {
+    return res.status(400).json({ message: "not all players cashed out" });
+  }
 
-  const gameUpdate = await GameModel.update(
+  await GameModel.update(
     {
       isOpen: 0,
     },
-
     {
       where: {
         id: gameId,
@@ -195,22 +200,18 @@ exports.endGame = async (req, res) => {
       game_id: gameId,
     },
   });
-  console.log(
-    "🚀 ~ file: game.js:183 ~ exports.endGame= ~ userGames:",
-    userGames
-  );
+
   const sortedUserGames = userGames.sort((a, b) => b.profit - a.profit);
   sortedUserGames.forEach((userGame, index) => {
     userGame.gameRank = index + 1;
   });
-  // Step 4: Update the game ranks in the database
+
   await Promise.all(
     sortedUserGames.map(async (userGame) => {
       await UserGameModel.update(
         {
           game_rank: userGame.gameRank,
         },
-
         {
           where: {
             user_id: userGame.user_id,
@@ -221,6 +222,5 @@ exports.endGame = async (req, res) => {
     })
   );
 
-  ///update season rank
   res.status(200).json({ message: `Game ${gameId} ended` });
 };
