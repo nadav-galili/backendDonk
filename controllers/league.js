@@ -1,6 +1,5 @@
 const init = require("../models/init");
-// const User = require("../models/user");
-// const League = require("../models/league");
+
 const UserModel = require("../models/User");
 const UserLeagueModel = require("../models/UserLeague");
 const LeagueModel = require("../models/League");
@@ -134,8 +133,6 @@ exports.joinLeague = async (req, res) => {
   let league = await LeagueModel.findOne({
     where: { league_number: leagueNumber },
   });
-
-  console.log("🚀 ~ exports.joinLeague= ~ league:", league);
 
   if (!league) {
     return res.status(404).json({ message: "League number not found" });
