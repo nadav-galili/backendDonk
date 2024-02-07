@@ -2,7 +2,6 @@ const GameModel = require("../models/Game");
 const UserGameModel = require("../models/UserGame");
 const GameDetailsModel = require("../models/GameDetails");
 const UserModel = require("../models/User");
-// const LeagueModel = require("../models/League");
 const Sequelize = require("sequelize");
 const gameUtils = require("../utils/gameUtils");
 
@@ -56,8 +55,6 @@ exports.newGame = async (req, res) => {
 };
 exports.addBuyInToPlayer = async (req, res) => {
   const { gameId, playerId, buyInAmount, leagueId } = req.body;
-  console.log("🚀 ~ exports.addBuyInToPlayer= ~ playerId:", playerId);
-  console.log("ww", typeof buyInAmount, buyInAmount);
 
   try {
     await Promise.all([

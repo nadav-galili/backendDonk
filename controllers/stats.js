@@ -48,7 +48,6 @@ exports.getLeagueStats = async (req, res) => {
       order: [["created_at", "DESC"]],
       limit: 1,
     });
-    console.log("🚀 ~ exports.getLeagueStats= ~ lastGame:", lastGame);
 
     if (lastGame) {
       const formattedDate = format(new Date(lastGame.created_at), "dd/MM/yy");
@@ -154,7 +153,7 @@ exports.getMainCardsStats = async (req, res) => {
       nickName: highestProfitPlayer["User.nickName"],
       image: highestProfitPlayer["User.image"],
     };
-
+    //************************** */
     const maxProfit = await UserGameModel.findOne({
       attributes: [
         [Sequelize.fn("max", Sequelize.col("profit")), "titleValue"],
@@ -181,6 +180,52 @@ exports.getMainCardsStats = async (req, res) => {
     maxProfit.image = maxProfit["User.image"];
     delete maxProfit["User.nickName"];
     delete maxProfit["User.image"];
+    //********************** */
+    const highestProfitPerHourPlayer = await UserGameModel.findAll({
+      attributes: [
+        "user_id",
+        [Sequelize.fn("SUM", Sequelize.col("profit")), "totalProfit"],
+        [
+          Sequelize.fn(
+            "SUM",
+            Sequelize.literal(
+              "TIMESTAMPDIFF(MINUTE, UserGames.created_at, UserGames.updated_at)"
+            )
+          ),
+          "totalHours",
+        ],
+      ],
+      where: { league_id: leagueId },
+      include: [
+        {
+          model: UserModel,
+          attributes: ["nickName", "image"],
+        },
+      ],
+      group: ["user_id"],
+    });
+
+    let formattedHighestProfitPerHour = highestProfitPerHourPlayer.map(
+      (player) => {
+        return {
+          id: player.user_id,
+          nickName: player.User.nickName,
+          image: player.User.image,
+          titleValue: Number(player.dataValues.totalProfit),
+          subTitleValue: (player.dataValues.totalHours / 60).toFixed(2),
+          subTitle2Value: (
+            player.dataValues.totalProfit /
+            (player.dataValues.totalHours / 60)
+          ).toFixed(2),
+        };
+      }
+    );
+    //get the player with the highest subTitle2Value
+    formattedHighestProfitPerHour = formattedHighestProfitPerHour.reduce(
+      (acc, player) => {
+        return acc.subTitle2Value > player.subTitle2Value ? acc : player;
+      }
+    );
 
     res.status(200).json([
       {
@@ -195,12 +240,15 @@ exports.getMainCardsStats = async (req, res) => {
         title: "Top 10 Profits",
         subTitle: "Buy In",
         subTitle2: "Date",
-
         values: maxProfit,
       },
-      // { id: 3, title: "Total Hours Played", value: 1000 },
-      // { id: 4, title: "Total Games Played", value: 1000 },
-      // { id: 5, title: "Last Game", value: "12/12/2021" },
+      {
+        id: 3,
+        title: "Profit Per Hour",
+        subTitle: "Hours Played",
+        subTitle2: "Buy In Per Hour",
+        values: formattedHighestProfitPerHour,
+      },
     ]);
   } catch (error) {
     console.error("Error retrieving main cards stats:", error);
