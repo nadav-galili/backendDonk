@@ -146,6 +146,14 @@ exports.getMainCardsStats = async (req, res) => {
     //add gamesCount to highestProfitPlayer object
 
     highestProfitPlayer.subTitleValue = gamesCount;
+    const formattedStats = {
+      id: highestProfitPlayer.user_id,
+      titleValue: highestProfitPlayer.titleValue,
+      subTitleValue: highestProfitPlayer.subTitleValue,
+      subTitle2Value: parseInt(highestProfitPlayer.subTitle2Value).toFixed(2),
+      nickName: highestProfitPlayer["User.nickName"],
+      image: highestProfitPlayer["User.image"],
+    };
 
     const maxProfit = await UserGameModel.findOne({
       attributes: [
@@ -169,10 +177,10 @@ exports.getMainCardsStats = async (req, res) => {
       "dd/MM/yy"
     );
     maxProfit.subTitle2Value = formattedDate;
-    // console.log(
-    //   "🚀 ~ exports.getMainCardsStats= ~ maxProfit:",
-    //   maxProfit.subTitle2Value
-    // );
+    maxProfit.nickName = maxProfit["User.nickName"];
+    maxProfit.image = maxProfit["User.image"];
+    delete maxProfit["User.nickName"];
+    delete maxProfit["User.image"];
 
     res.status(200).json([
       {
@@ -180,7 +188,7 @@ exports.getMainCardsStats = async (req, res) => {
         title: "Total Profit",
         subTitle: "Total Games",
         subTitle2: "Average Profit",
-        values: highestProfitPlayer,
+        values: formattedStats,
       },
       {
         id: 2,
@@ -188,11 +196,11 @@ exports.getMainCardsStats = async (req, res) => {
         subTitle: "Buy In",
         subTitle2: "Date",
 
-        value: maxProfit,
+        values: maxProfit,
       },
-      { id: 3, title: "Total Hours Played", value: 1000 },
-      { id: 4, title: "Total Games Played", value: 1000 },
-      { id: 5, title: "Last Game", value: "12/12/2021" },
+      // { id: 3, title: "Total Hours Played", value: 1000 },
+      // { id: 4, title: "Total Games Played", value: 1000 },
+      // { id: 5, title: "Last Game", value: "12/12/2021" },
     ]);
   } catch (error) {
     console.error("Error retrieving main cards stats:", error);
