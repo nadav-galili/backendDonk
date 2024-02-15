@@ -231,6 +231,7 @@ exports.getMainCardsStats = async (req, res) => {
       {
         id: 1,
         title: "Total Profit",
+        apiRoute: "totalProfit",
         subTitle: "Total Games",
         subTitle2: "Average Profit",
         values: formattedStats,
@@ -238,6 +239,7 @@ exports.getMainCardsStats = async (req, res) => {
       {
         id: 2,
         title: "Top 10 Profits",
+        apiRoute: "top10Profits",
         subTitle: "Buy In",
         subTitle2: "Date",
         values: maxProfit,
@@ -245,6 +247,7 @@ exports.getMainCardsStats = async (req, res) => {
       {
         id: 3,
         title: "Profit Per Hour",
+        apiRoute: "profitPerHour",
         subTitle: "Hours Played",
         subTitle2: "Buy In Per Hour",
         values: formattedHighestProfitPerHour,
@@ -252,6 +255,69 @@ exports.getMainCardsStats = async (req, res) => {
     ]);
   } catch (error) {
     console.error("Error retrieving main cards stats:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.totalProfitForCard = async (req, res) => {
+  const leagueId = req.params.leagueId;
+  //// SELECT users.id, users.nickName,users.image, sum(profit) FROM betdonk.usergames join users on usergames.user_id=users.id group by user_id
+
+  try {
+    const totalProfit = await UserGameModel.findAll({
+      attributes: [
+        "user_id",
+        [Sequelize.fn("sum", Sequelize.col("profit")), "totalProfit"],
+        ///get count of games for this user
+        [Sequelize.fn("count", Sequelize.col("game_id")), "gamesCount"],
+      ],
+      where: { league_id: leagueId },
+      group: ["user_id"],
+      include: [
+        {
+          model: UserModel,
+          attributes: ["nickName", "image"],
+        },
+      ],
+      order: [[Sequelize.literal("totalProfit"), "DESC"]],
+      raw: true,
+    });
+
+    const getWinLossRatio = async (user_id) => {
+      const winns = await UserGameModel.count({
+        where: {
+          league_id: leagueId,
+          user_id: user_id,
+          profit: { [Sequelize.Op.gt]: 0 },
+        },
+      });
+      const loss = await UserGameModel.count({
+        where: {
+          league_id: leagueId,
+          user_id: user_id,
+          profit: { [Sequelize.Op.lt]: 0 },
+        },
+      });
+      const ratio = (winns / (winns + loss)) * 100;
+      return ratio.toFixed(2);
+    };
+
+    const formattedTotalProfit = await Promise.all(
+      totalProfit.map(async (player) => {
+        return {
+          id: player.user_id,
+          nickName: player["User.nickName"],
+          image: player["User.image"],
+          title: player.totalProfit,
+          subTitle: player.gamesCount,
+          subTitle2: await getWinLossRatio(player.user_id),
+        };
+      })
+    );
+
+    res.status(200).json(formattedTotalProfit);
+  } catch (error) {
+    console.error("Error retrieving total profit for card:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

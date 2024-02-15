@@ -6,5 +6,6 @@ const statsController = require("../controllers/stats");
 router.get("/getLeagueStats/:leagueId", statsController.getLeagueStats);
 router.get("/getPlayersStats/:leagueId", statsController.getPlayersStats);
 router.get("/getMainCardsStats/:leagueId", statsController.getMainCardsStats);
+router.get("/totalProfit/:leagueId", statsController.totalProfitForCard);
 
 module.exports = router;

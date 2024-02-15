@@ -4,6 +4,7 @@ const GameDetailsModel = require("../models/GameDetails");
 const UserModel = require("../models/User");
 const Sequelize = require("sequelize");
 const gameUtils = require("../utils/gameUtils");
+const User = require("../models/User");
 
 exports.newGame = async (req, res) => {
   const { selectedPlayers, leagueId } = req.body;
@@ -220,4 +221,36 @@ exports.endGame = async (req, res) => {
   );
 
   res.status(200).json({ message: `Game ${gameId} ended` });
+};
+
+exports.getAllGames = async (req, res) => {
+  const { leagueId } = req.params;
+  const games = await GameModel.findAll({
+    where: {
+      league_id: leagueId,
+    },
+    attributes: ["id", "created_at"],
+    include: [
+      {
+        model: UserGameModel,
+        as: "userGames", // Update the alias to "userGames"
+        attributes: [
+          "game_id",
+          "user_id",
+          "buy_ins_amount",
+          "cash_in_hand",
+          "game_rank",
+        ],
+        include: [
+          {
+            model: UserModel,
+            as: "User",
+            attributes: ["id", "nickName", "image"],
+          },
+        ],
+      },
+    ],
+  });
+
+  res.status(200).json({ games });
 };
