@@ -7,7 +7,7 @@ class User extends Model {
   generateAuthToken() {
     const token = jwt.sign(
       { userId: this.id, nickName: this.nickName },
-      process.env.jwtKey
+      process.env.JWTKEY
     );
     return token;
   }

@@ -7,6 +7,7 @@ const GameModel = require("../models/Game");
 const { Sequelize } = require("sequelize");
 const { format } = require("date-fns");
 const UserGameModel = require("../models/UserGame");
+const dayjs = require("dayjs");
 
 exports.getLeagueStats = async (req, res) => {
   const leagueId = req.params.leagueId;
@@ -261,7 +262,6 @@ exports.getMainCardsStats = async (req, res) => {
 
 exports.totalProfitForCard = async (req, res) => {
   const leagueId = req.params.leagueId;
-  //// SELECT users.id, users.nickName,users.image, sum(profit) FROM betdonk.usergames join users on usergames.user_id=users.id group by user_id
 
   try {
     const totalProfit = await UserGameModel.findAll({
@@ -318,6 +318,61 @@ exports.totalProfitForCard = async (req, res) => {
     res.status(200).json(formattedTotalProfit);
   } catch (error) {
     console.error("Error retrieving total profit for card:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.top10ProfitsForCard = async (req, res) => {
+  const leagueId = req.params.leagueId;
+
+  try {
+    const top10Profits = await UserGameModel.findAll({
+      attributes: [
+        "user_id",
+        [Sequelize.fn("sum", Sequelize.col("profit")), "totalProfit"],
+        [Sequelize.fn("max", Sequelize.col("buy_ins_amount")), "buyInAmount"],
+        [Sequelize.col("userGames.created_at"), "gameDate"],
+      ],
+      where: { league_id: leagueId },
+      include: [
+        {
+          model: UserModel,
+          attributes: ["nickName", "image"],
+        },
+      ],
+      group: ["user_id", "buy_ins_amount", "userGames.created_at"], // Add the 'buy_ins_amount' column to the GROUP BY clause
+      order: [[Sequelize.literal("totalProfit"), "DESC"]],
+      limit: 10,
+      raw: true,
+    });
+
+    if (!top10Profits.length) {
+      res.status(404).json("No data found");
+      return;
+    }
+
+    const formattedTop10Profits = top10Profits.map((player) => {
+      const formattedDate = dayjs(player.gameDate).format("DD/MM/YY");
+
+      const id = player.user_id;
+      const nickName = player["User.nickName"];
+      const image = player["User.image"];
+      const title = Number(player.totalProfit);
+      const subTitle = player.buyInAmount;
+      const subTitle2 = formattedDate;
+      return {
+        id,
+        nickName,
+        image,
+        title,
+        subTitle,
+        subTitle2,
+      };
+    });
+
+    res.status(200).json(formattedTop10Profits);
+  } catch (error) {
+    console.error("Error retrieving top 10 profits for card:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
