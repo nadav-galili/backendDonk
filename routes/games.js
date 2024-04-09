@@ -10,6 +10,11 @@ router.get(
   auth,
   gameController.getUserGamesByGameId
 );
+router.post(
+  "/removeLastBuyInToPlayer",
+  auth,
+  gameController.removeLastBuyInToPlayer
+);
 router.get("/getGameDetails/:gameId", auth, gameController.getGameDetails);
 router.put("/cashOutPlayer", auth, gameController.cashOutPlayer);
 router.put("/endGame", auth, gameController.endGame);

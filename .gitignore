@@ -6,3 +6,4 @@ db.js
 config.js
 config/
 ```
+.vscode/launch.json

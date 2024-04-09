@@ -98,6 +98,53 @@ exports.addBuyInToPlayer = async (req, res) => {
   }
 };
 
+exports.removeLastBuyInToPlayer = async (req, res) => {
+  const { gameId, playerId, leagueId } = req.body;
+  console.log("removeLastBuyInToPlayer", req.body);
+
+  try {
+    const lastBuyIn = await GameDetailsModel.findOne({
+      where: {
+        game_id: gameId,
+        user_id: playerId,
+        league_id: leagueId,
+      },
+      order: [["id", "DESC"]],
+    });
+
+    if (!lastBuyIn) {
+      return res.status(400).json({ message: "No buy-ins found" });
+    }
+
+    await Promise.all([
+      lastBuyIn.destroy(),
+      UserGameModel.update(
+        {
+          buy_ins_amount: Sequelize.literal(
+            `buy_ins_amount - ${lastBuyIn.buy_in_amount}`
+          ),
+          buy_ins_number: Sequelize.literal(`buy_ins_number - 1`),
+        },
+        {
+          where: {
+            user_id: playerId,
+            game_id: gameId,
+          },
+        }
+      ),
+    ]);
+
+    return res.status(200).json([
+      {
+        message: `Last buy-in ${lastBuyIn.buy_in_amount} removed from player ${playerId} in game ${gameId}`,
+      },
+      lastBuyIn?.buy_in_amount,
+    ]);
+  } catch (error) {
+    console.error("Error removing buy-in:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 exports.getUserGamesByGameId = async (req, res) => {
   const { gameId } = req.params;
 

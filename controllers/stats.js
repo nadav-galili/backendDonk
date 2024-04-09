@@ -5,7 +5,6 @@ const LeagueModel = require("../models/League");
 const GameDetailsModel = require("../models/GameDetails");
 const GameModel = require("../models/Game");
 const { Sequelize } = require("sequelize");
-const { format } = require("date-fns");
 const UserGameModel = require("../models/UserGame");
 const dayjs = require("dayjs");
 
@@ -51,7 +50,7 @@ exports.getLeagueStats = async (req, res) => {
     });
 
     if (lastGame) {
-      const formattedDate = format(new Date(lastGame.created_at), "dd/MM/yy");
+      const formattedDate = dayjs(lastGame.created_at).format("DD/MM/YY");
       lastGame.dataValues.created_at = formattedDate;
     } else {
       // Handle case where no game is found
@@ -172,10 +171,7 @@ exports.getMainCardsStats = async (req, res) => {
       order: [[Sequelize.literal("titleValue"), "DESC"]],
       raw: true,
     });
-    const formattedDate = format(
-      new Date(maxProfit?.subTitle2Value),
-      "dd/MM/yy"
-    );
+    const formattedDate = dayjs(maxProfit?.subTitle2Value).format("DD/MM/YY");
     maxProfit.subTitle2Value = formattedDate;
     maxProfit.nickName = maxProfit["User.nickName"];
     maxProfit.image = maxProfit["User.image"];
@@ -373,6 +369,73 @@ exports.top10ProfitsForCard = async (req, res) => {
     res.status(200).json(formattedTop10Profits);
   } catch (error) {
     console.error("Error retrieving top 10 profits for card:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.profitPerHour = async (req, res) => {
+  const leagueId = req.params.leagueId;
+  try {
+    const profitPerHour = await UserGameModel.findAll({
+      attributes: [
+        "user_id",
+        [Sequelize.fn("SUM", Sequelize.col("profit")), "totalProfit"],
+        [
+          Sequelize.fn(
+            "SUM",
+            Sequelize.literal(
+              "TIMESTAMPDIFF(HOUR, UserGames.created_at, UserGames.cash_out_time)"
+            )
+          ),
+          "totalHours",
+        ],
+
+        [
+          Sequelize.literal(
+            "SUM(buy_ins_amount) / SUM(TIMESTAMPDIFF(HOUR, UserGames.created_at, UserGames.cash_out_time))"
+          ),
+          "buyInPerHour",
+        ],
+      ],
+      where: { league_id: leagueId },
+      include: [
+        {
+          model: UserModel,
+          attributes: ["nickName", "image"],
+        },
+      ],
+      group: ["user_id"],
+    });
+
+    if (!profitPerHour.length) {
+      res.status(404).json("No data found");
+      return;
+    }
+
+    const formattedProftPerHour = profitPerHour.map((player) => {
+      const id = player.user_id;
+      const nickName = player["User"].nickName;
+      const image = player["User"].image;
+      let title =
+        player.dataValues.totalHours !== 0
+          ? player.dataValues.totalProfit / player.dataValues?.totalHours
+          : "N/A";
+      const subTitle = Number(player.dataValues.totalHours).toFixed(2);
+      const subTitle2 = Number(player.dataValues.buyInPerHour).toFixed(2);
+      title = Number(title).toFixed(2);
+      return {
+        id,
+        nickName,
+        image,
+        title,
+        subTitle,
+        subTitle2,
+      };
+    });
+
+    res.status(200).json(formattedProftPerHour);
+  } catch (error) {
+    console.error("Error retrieving profit per hour:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
