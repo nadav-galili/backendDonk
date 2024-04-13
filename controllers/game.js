@@ -271,33 +271,56 @@ exports.endGame = async (req, res) => {
 };
 
 exports.getAllGames = async (req, res) => {
-  const { leagueId } = req.params;
-  const games = await GameModel.findAll({
-    where: {
-      league_id: leagueId,
-    },
-    attributes: ["id", "created_at"],
-    include: [
-      {
-        model: UserGameModel,
-        as: "userGames", // Update the alias to "userGames"
-        attributes: [
-          "game_id",
-          "user_id",
-          "buy_ins_amount",
-          "cash_in_hand",
-          "game_rank",
-        ],
-        include: [
-          {
-            model: UserModel,
-            as: "User",
-            attributes: ["id", "nickName", "image"],
-          },
-        ],
-      },
-    ],
-  });
+  const { leagueId, continuationToken } = req.query;
 
-  res.status(200).json({ games });
+  // Convert continuationToken to a number and provide a default value if it's not a valid number
+  const offset = Number(continuationToken) || 0;
+
+  if (isNaN(offset)) {
+    console.error("Invalid continuation token:", continuationToken);
+    return res.status(400).json({ error: "Invalid pagination token" });
+  }
+
+  try {
+    const limit = 3; // Number of games per page
+
+    const games = await GameModel.findAll({
+      where: { league_id: leagueId },
+      attributes: ["id", "created_at"],
+      include: [
+        {
+          model: UserGameModel,
+          as: "userGames",
+          attributes: [
+            "game_id",
+            "user_id",
+            "buy_ins_amount",
+            "cash_in_hand",
+            "game_rank",
+          ],
+          include: [
+            {
+              model: UserModel,
+              as: "User",
+              attributes: ["id", "nickName", "image"],
+            },
+          ],
+        },
+      ],
+      order: [["id", "DESC"]],
+      limit,
+      offset,
+    });
+    console.log("games");
+    const nextContinuationToken = offset + limit;
+    res.status(200).json({
+      games,
+      nextContinuationToken: nextContinuationToken,
+    });
+  } catch (error) {
+    console.error("Error getting all games:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error", error: error });
+  }
 };

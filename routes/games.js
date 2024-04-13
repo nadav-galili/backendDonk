@@ -18,6 +18,6 @@ router.post(
 router.get("/getGameDetails/:gameId", auth, gameController.getGameDetails);
 router.put("/cashOutPlayer", auth, gameController.cashOutPlayer);
 router.put("/endGame", auth, gameController.endGame);
-router.get("/allGames/:leagueId", auth, gameController.getAllGames);
+router.get("/getAllGamesForLeague/", auth, gameController.getAllGames);
 
 module.exports = router;
