@@ -5,6 +5,7 @@ const UserModel = require("../models/User");
 const Sequelize = require("sequelize");
 const gameUtils = require("../utils/gameUtils");
 const User = require("../models/User");
+const dayJs = require("dayjs");
 
 exports.newGame = async (req, res) => {
   const { selectedPlayers, leagueId } = req.body;
@@ -271,7 +272,9 @@ exports.endGame = async (req, res) => {
 };
 
 exports.getAllGames = async (req, res) => {
-  const { leagueId, continuationToken } = req.query;
+  const { leagueId, continuationToken, startDate, endDate } = req.query;
+  let createdAt = startDate ?? dayJs().startOf("year").toDate();
+  let endAt = endDate ?? dayJs().toDate();
 
   // Convert continuationToken to a number and provide a default value if it's not a valid number
   const offset = Number(continuationToken) || 0;
@@ -285,14 +288,20 @@ exports.getAllGames = async (req, res) => {
     const limit = 3; // Number of games per page
 
     const games = await GameModel.findAll({
-      where: { league_id: leagueId },
-      attributes: ["id", "created_at"],
+      where: {
+        league_id: leagueId,
+        created_at: {
+          [Sequelize.Op.between]: [createdAt, endAt],
+        },
+      },
+      attributes: ["id", "created_at", "updated_at", "isOpen"],
       include: [
         {
           model: UserGameModel,
           as: "userGames",
           attributes: [
             "game_id",
+            "profit",
             "user_id",
             "buy_ins_amount",
             "cash_in_hand",
@@ -307,11 +316,14 @@ exports.getAllGames = async (req, res) => {
           ],
         },
       ],
-      order: [["id", "DESC"]],
+      order: [
+        ["id", "DESC"], // This orders the Games by id in descending order
+        [{ model: UserGameModel, as: "userGames" }, "game_rank", "ASC"], // This orders the nested UserGames by game_rank in ascending order
+      ],
       limit,
       offset,
     });
-    console.log("games");
+
     const nextContinuationToken = offset + limit;
     res.status(200).json({
       games,
