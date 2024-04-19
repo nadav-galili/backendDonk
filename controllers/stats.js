@@ -120,6 +120,14 @@ exports.getMainCardsStats = async (req, res) => {
   const leagueId = req.params.leagueId;
 
   try {
+    const countGamesForLeague = await GameModel.count({
+      where: { league_id: leagueId },
+    });
+
+    if (countGamesForLeague === 0) {
+      res.status(404).json("No games found");
+      return;
+    }
     const highestProfitPlayer = await UserGameModel.findOne({
       attributes: [
         "user_id",

@@ -8,15 +8,16 @@ const User = require("../models/User");
 const dayJs = require("dayjs");
 
 exports.newGame = async (req, res) => {
-  const { selectedPlayers, leagueId } = req.body;
+  const { selectedPlayers, leagueId, gameAdminId } = req.body;
 
-  if (!selectedPlayers || !leagueId)
-    return res.status(400).json({ message: "missing data" });
+  if (!selectedPlayers || !leagueId || !gameAdminId)
+    return res.status(400).json({ message: "missing data", data: req.body });
 
   try {
     const game = await GameModel.create({
       league_id: leagueId,
       isOpen: true,
+      game_manager_id: gameAdminId,
     });
 
     const gameDetails = [];
@@ -37,8 +38,8 @@ exports.newGame = async (req, res) => {
 
         const user = await gameUtils.getUserData(player.user_id);
 
-        newUserGame.dataValues.user = user.dataValues;
-        newGameDetails.dataValues.user = user.dataValues;
+        newUserGame.dataValues.User = user.dataValues;
+        newGameDetails.dataValues.User = user.dataValues;
 
         userGames.push(newUserGame);
         gameDetails.push(newGameDetails);
@@ -294,7 +295,13 @@ exports.getAllGames = async (req, res) => {
           [Sequelize.Op.between]: [createdAt, endAt],
         },
       },
-      attributes: ["id", "created_at", "updated_at", "isOpen"],
+      attributes: [
+        "id",
+        "created_at",
+        "updated_at",
+        "isOpen",
+        "game_manager_id",
+      ],
       include: [
         {
           model: UserGameModel,
@@ -325,6 +332,18 @@ exports.getAllGames = async (req, res) => {
     });
 
     const nextContinuationToken = offset + limit;
+    if (games.length > 0) {
+      const game_manager = await UserModel.findOne({
+        where: {
+          id: games[0]?.game_manager_id,
+        },
+        attributes: ["id", "nickName", "image"],
+      });
+      games.forEach((game) => {
+        game.dataValues.game_manager = game_manager;
+      });
+    }
+
     res.status(200).json({
       games,
       nextContinuationToken: nextContinuationToken,
@@ -335,4 +354,40 @@ exports.getAllGames = async (req, res) => {
       .status(500)
       .json({ message: "Internal server error", error: error });
   }
+};
+exports.checkIfOpenGameExist = async (req, res) => {
+  const { leagueId } = req.query;
+
+  const openGame = await GameModel.findOne({
+    where: {
+      league_id: leagueId,
+      isOpen: true,
+    },
+  });
+  if (!openGame)
+    return res.status(404).json({ message: "No open games found" });
+  const userGames = await UserGameModel.findAll({
+    where: {
+      game_id: openGame?.id,
+    },
+    include: [
+      {
+        model: UserModel,
+        as: "User",
+        attributes: ["id", "nickName", "image"],
+      },
+    ],
+  });
+  const gameDetails = await GameDetailsModel.findAll({
+    where: {
+      game_id: openGame?.id,
+    },
+  });
+
+  return res.status(200).json({
+    message: `Game number ${openGame.id} already open `,
+    game: openGame,
+    userGames,
+    gameDetails,
+  });
 };
