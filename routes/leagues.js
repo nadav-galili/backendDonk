@@ -19,5 +19,9 @@ router.put(
   auth,
   leagueController.joinLeague
 );
-
+router.get(
+  "/getLeaguePlayersByLeagueId/:leagueId",
+  auth,
+  leagueController.getLeaguePlayersByLeagueId
+);
 module.exports = router;

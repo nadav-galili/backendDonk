@@ -173,3 +173,20 @@ exports.joinLeague = async (req, res) => {
     .status(200)
     .json({ message: "League joined", league, userLeague, leaguePlayers });
 };
+
+exports.getLeaguePlayersByLeagueId = async (req, res) => {
+  const { leagueId } = req.params;
+
+  const leaguePlayers = await UserLeagueModel.findAll({
+    where: { league_id: leagueId },
+    include: [
+      {
+        model: UserModel,
+        attributes: ["id", "nickName", "image"],
+        as: "User",
+      },
+    ],
+  });
+
+  return res.status(200).json({ leaguePlayers });
+};
