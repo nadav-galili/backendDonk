@@ -307,6 +307,36 @@ exports.getMainCardsStats = async (req, res) => {
         return acc.subTitle2Value > player.subTitle2Value ? acc : player;
       }
     );
+    //*************************** */
+
+    const getTopComeback = await UserGameModel.findAll({
+      attributes: [
+        "user_id",
+        [Sequelize.fn("max", Sequelize.col("buy_ins_amount")), "buyIn"],
+        [Sequelize.fn("max", Sequelize.col("profit")), "profit"],
+        "created_at",
+      ],
+      where: { league_id: leagueId, profit: { [Sequelize.Op.gt]: 0 } },
+      group: ["user_id", "created_at"],
+      include: [
+        {
+          model: UserModel,
+          attributes: ["nickName", "image"],
+        },
+      ],
+      order: [[Sequelize.literal("buyIn"), "DESC"]],
+      raw: true,
+      limit: 1,
+    });
+
+    const formattedBiggestComeback = {
+      id: getTopComeback[0].user_id,
+      nickName: getTopComeback[0]["User.nickName"],
+      image: getTopComeback[0]["User.image"],
+      titleValue: getTopComeback[0].profit,
+      subTitleValue: getTopComeback[0].buyIn,
+      subTitle2Value: dayjs(getTopComeback[0].created_at).format("DD/MM/YY"),
+    };
 
     res.status(200).json([
       {
@@ -332,6 +362,14 @@ exports.getMainCardsStats = async (req, res) => {
         subTitle: "Hours Played",
         subTitle2: "Buy In Per Hour",
         values: formattedHighestProfitPerHour,
+      },
+      {
+        id: 4,
+        title: "Top 10 Comebacks",
+        apiRoute: "top10Comebacks",
+        subTitle: "Buy In",
+        subTitle2: "Date",
+        values: formattedBiggestComeback,
       },
     ]);
   } catch (error) {
