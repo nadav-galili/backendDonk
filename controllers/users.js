@@ -12,7 +12,7 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     let ext = path.extname(file.originalname);
-    let fileName = path.basename(file.originalname, ext);
+    let fileName = path.basename(file.originalname.replace(/\s/g, ""), ext);
     cb(null, fileName + "-" + Date.now() + ext);
   },
 });
@@ -36,7 +36,7 @@ exports.signup = async function (req, res) {
     const newUser = await UserModel.create({
       password: hashedPassword,
       nickName,
-      image: req.file?.path ?? "uploads/anonymos.png",
+      image: req.file?.path.trim() ?? "uploads/anonymos.png",
     });
 
     //generate token
@@ -90,7 +90,6 @@ exports.login = async function (req, res) {
 
   try {
     const existingUser = await UserModel.findOne({ where: { nickName } });
-    console.log("🚀 ~ existingUser:", existingUser);
 
     if (!existingUser) {
       return res.status(404).json({ error: "User not found." });

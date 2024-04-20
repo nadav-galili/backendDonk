@@ -1,12 +1,88 @@
 const init = require("../models/init");
 const UserModel = require("../models/User");
-const UserLeagueModel = require("../models/UserLeague");
-const LeagueModel = require("../models/League");
+// const UserLeagueModel = require("../models/UserLeague");
+// const LeagueModel = require("../models/League");
 const GameDetailsModel = require("../models/GameDetails");
 const GameModel = require("../models/Game");
 const { Sequelize } = require("sequelize");
 const UserGameModel = require("../models/UserGame");
 const dayjs = require("dayjs");
+
+exports.profitPerHour = async (req, res) => {
+  const leagueId = req.params.leagueId;
+  try {
+    const profitPerHour = await UserGameModel.findAll({
+      attributes: [
+        "user_id",
+        [Sequelize.fn("SUM", Sequelize.col("profit")), "totalProfit"],
+        [
+          Sequelize.fn(
+            "SUM",
+            Sequelize.literal(
+              "TIMESTAMPDIFF(MINUTE, UserGames.created_at, UserGames.cash_out_time)/60"
+            )
+          ),
+          "totalHours",
+        ],
+
+        [
+          Sequelize.literal(
+            "SUM(buy_ins_amount) / SUM(TIMESTAMPDIFF(MINUTE, UserGames.created_at, UserGames.cash_out_time)/60)"
+          ),
+          "buyInPerHour",
+        ],
+        [Sequelize.literal("SUM(buy_ins_amount)"), "totalBuyIns"],
+      ],
+      where: { league_id: leagueId },
+      include: [
+        {
+          model: UserModel,
+          attributes: ["nickName", "image"],
+        },
+      ],
+      group: ["user_id"],
+    });
+
+    profitPerHour.forEach((player) => {
+      if (player.dataValues.buyInPerHour === 0) {
+        player.dataValues.buyInPerHour =
+          player.dataValues.buyInPerHour.toFixed(2);
+      }
+    });
+    // console.log("🚀 ~ exports.profitPerHour= ~ profitPerHour:", profitPerHour);
+
+    if (!profitPerHour.length) {
+      res.status(404).json("No data found");
+      return;
+    }
+
+    const formattedProftPerHour = profitPerHour.map((player) => {
+      const id = player.user_id;
+      const nickName = player["User"].nickName;
+      const image = player["User"].image;
+      let title =
+        player.dataValues.totalHours !== 0
+          ? player.dataValues.totalProfit / player.dataValues?.totalHours
+          : "N/A";
+      const subTitle = Number(player.dataValues.totalHours).toFixed(2);
+      const subTitle2 = Number(player.dataValues.buyInPerHour).toFixed(2);
+      title = Number(title).toFixed(2);
+      return {
+        id,
+        nickName,
+        image,
+        title,
+        subTitle,
+        subTitle2,
+      };
+    });
+
+    res.status(200).json(formattedProftPerHour);
+  } catch (error) {
+    console.error("Error retrieving profit per hour:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
 
 exports.getLeagueStats = async (req, res) => {
   const leagueId = req.params.leagueId;
@@ -377,73 +453,6 @@ exports.top10ProfitsForCard = async (req, res) => {
     res.status(200).json(formattedTop10Profits);
   } catch (error) {
     console.error("Error retrieving top 10 profits for card:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-exports.profitPerHour = async (req, res) => {
-  const leagueId = req.params.leagueId;
-  try {
-    const profitPerHour = await UserGameModel.findAll({
-      attributes: [
-        "user_id",
-        [Sequelize.fn("SUM", Sequelize.col("profit")), "totalProfit"],
-        [
-          Sequelize.fn(
-            "SUM",
-            Sequelize.literal(
-              "TIMESTAMPDIFF(HOUR, UserGames.created_at, UserGames.cash_out_time)"
-            )
-          ),
-          "totalHours",
-        ],
-
-        [
-          Sequelize.literal(
-            "SUM(buy_ins_amount) / SUM(TIMESTAMPDIFF(HOUR, UserGames.created_at, UserGames.cash_out_time))"
-          ),
-          "buyInPerHour",
-        ],
-      ],
-      where: { league_id: leagueId },
-      include: [
-        {
-          model: UserModel,
-          attributes: ["nickName", "image"],
-        },
-      ],
-      group: ["user_id"],
-    });
-
-    if (!profitPerHour.length) {
-      res.status(404).json("No data found");
-      return;
-    }
-
-    const formattedProftPerHour = profitPerHour.map((player) => {
-      const id = player.user_id;
-      const nickName = player["User"].nickName;
-      const image = player["User"].image;
-      let title =
-        player.dataValues.totalHours !== 0
-          ? player.dataValues.totalProfit / player.dataValues?.totalHours
-          : "N/A";
-      const subTitle = Number(player.dataValues.totalHours).toFixed(2);
-      const subTitle2 = Number(player.dataValues.buyInPerHour).toFixed(2);
-      title = Number(title).toFixed(2);
-      return {
-        id,
-        nickName,
-        image,
-        title,
-        subTitle,
-        subTitle2,
-      };
-    });
-
-    res.status(200).json(formattedProftPerHour);
-  } catch (error) {
-    console.error("Error retrieving profit per hour:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

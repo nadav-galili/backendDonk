@@ -6,7 +6,7 @@ const LeagueModel = require("../models/League");
 const { generateLeagueNumber } = require("../models/League");
 const multer = require("multer");
 const path = require("path");
-const { Sequelize } = require("sequelize");
+// const { Sequelize } = require("sequelize");
 
 // Define multer storage utilsuration
 const storage = multer.diskStorage({
@@ -15,7 +15,7 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     let ext = path.extname(file.originalname);
-    let fileName = path.basename(file.originalname, ext);
+    let fileName = path.basename(file.originalname.replace(/\s/g, ""), ext);
     cb(null, fileName + "-" + Date.now() + ext);
   },
 });

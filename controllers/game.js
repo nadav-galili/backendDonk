@@ -4,7 +4,7 @@ const GameDetailsModel = require("../models/GameDetails");
 const UserModel = require("../models/User");
 const Sequelize = require("sequelize");
 const gameUtils = require("../utils/gameUtils");
-const User = require("../models/User");
+// const User = require("../models/User");
 const dayJs = require("dayjs");
 
 exports.newGame = async (req, res) => {
@@ -223,51 +223,84 @@ exports.cashOutPlayer = async (req, res) => {
 };
 
 exports.endGame = async (req, res) => {
-  const { gameId, userGamesData } = req.body;
+  const { gameId, userGamesData, league } = req.body;
+  const leagueId = league.id;
   const allPlayersCashedOut = userGamesData.every(
     (player) => player.is_cashed_out === true
   );
   if (!allPlayersCashedOut) {
     return res.status(400).json({ message: "not all players cashed out" });
   }
-
-  await GameModel.update(
-    {
-      isOpen: 0,
-    },
-    {
-      where: {
-        id: gameId,
+  try {
+    await GameModel.update(
+      {
+        isOpen: 0,
       },
-    }
-  );
-
-  const userGames = await UserGameModel.findAll({
-    where: {
-      game_id: gameId,
-    },
-  });
-
-  const sortedUserGames = userGames.sort((a, b) => b.profit - a.profit);
-  sortedUserGames.forEach((userGame, index) => {
-    userGame.gameRank = index + 1;
-  });
-
-  await Promise.all(
-    sortedUserGames.map(async (userGame) => {
-      await UserGameModel.update(
-        {
-          game_rank: userGame.gameRank,
+      {
+        where: {
+          id: gameId,
         },
-        {
-          where: {
-            user_id: userGame.user_id,
-            game_id: gameId,
-          },
-        }
+      }
+    );
+
+    const userGames = await UserGameModel.findAll({
+      where: {
+        game_id: gameId,
+      },
+    });
+
+    const sortedUserGames = userGames.sort((a, b) => b.profit - a.profit);
+    sortedUserGames.forEach((userGame, index) => {
+      userGame.gameRank = index + 1;
+    });
+
+    // Step 1: Calculate total profit for each user in the league
+    const getSeasonProfitForUsers = await UserGameModel.findAll({
+      attributes: [
+        "user_id",
+        [Sequelize.fn("sum", Sequelize.col("profit")), "totalProfit"],
+      ],
+      where: { league_id: leagueId },
+      group: "user_id",
+      order: [[Sequelize.col("totalProfit"), "DESC"]],
+      raw: true,
+    });
+
+    userGames.forEach((userGame) => {
+      const user = getSeasonProfitForUsers.find(
+        (user) => user.user_id === userGame.user_id
       );
-    })
-  );
+      userGame.totalProfit = user.totalProfit;
+    });
+
+    // Step 2: Sort userGames by totalProfit in descending order
+    userGames.sort((a, b) => b.totalProfit - a.totalProfit);
+
+    // Step 3: Update game_rank based on the sorted order
+    userGames.forEach((userGame, index) => {
+      userGame.season_rank = index + 1;
+    });
+
+    await Promise.all(
+      sortedUserGames.map(async (userGame) => {
+        await UserGameModel.update(
+          {
+            game_rank: userGame.gameRank,
+            season_rank: userGame.season_rank,
+          },
+          {
+            where: {
+              user_id: userGame.user_id,
+              game_id: gameId,
+            },
+          }
+        );
+      })
+    );
+  } catch (error) {
+    console.error("Error ending game:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
 
   res.status(200).json({ message: `Game ${gameId} ended` });
 };
