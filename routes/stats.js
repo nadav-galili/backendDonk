@@ -9,5 +9,6 @@ router.get("/getMainCardsStats/:leagueId", statsController.getMainCardsStats);
 router.get("/totalProfit/:leagueId", statsController.totalProfitForCard);
 router.get("/top10Profits/:leagueId", statsController.top10ProfitsForCard);
 router.get("/profitPerHour/:leagueId", statsController.profitPerHour);
+router.get("/top10Comebacks/:leagueId", statsController.top10Comebacks);
 
 module.exports = router;

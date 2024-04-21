@@ -7,6 +7,7 @@ const GameModel = require("../models/Game");
 const { Sequelize } = require("sequelize");
 const UserGameModel = require("../models/UserGame");
 const dayjs = require("dayjs");
+const sequelize = require("../db");
 
 exports.profitPerHour = async (req, res) => {
   const leagueId = req.params.leagueId;
@@ -338,11 +339,123 @@ exports.getMainCardsStats = async (req, res) => {
       subTitle2Value: dayjs(getTopComeback[0].created_at).format("DD/MM/YY"),
     };
 
+    //*************************** */
+
+    await sequelize.query("SET @user_id = 0, @streak = 0, @prev_profit = 0;", {
+      type: sequelize.QueryTypes.RAW,
+    });
+    await sequelize.query(
+      "SET @current_user = NULL, @current_streak = 0, @last_game_id = NULL;",
+      { type: sequelize.QueryTypes.RAW }
+    );
+
+    const getBestWinningStreak = await sequelize.query(
+      `
+      SELECT user_id, MAX(streak) as max_streak FROM (
+          SELECT 
+              user_id,
+              game_id,
+              profit,
+              @current_streak := IF(@current_user = user_id AND @last_game_id + 1 = game_id AND profit > 0, @current_streak + 1, 
+                                    IF(profit > 0, 1, 0)) AS streak,
+              @last_game_id := game_id,
+              @current_user := user_id
+          FROM 
+              usergames
+          WHERE 
+              league_id = :leagueId AND profit > 0
+          ORDER BY 
+              user_id, game_id
+      ) AS subquery
+      WHERE profit > 0
+      GROUP BY user_id
+      ORDER BY max_streak DESC
+      LIMIT 1;
+    `,
+      {
+        replacements: { leagueId: leagueId },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+    let bestWinningStreakUser = {};
+    if (getBestWinningStreak.length > 0) {
+      bestWinningStreakUser = await UserModel.findOne({
+        where: { id: getBestWinningStreak[0].user_id },
+        attributes: ["nickName", "image"],
+      });
+      let user_id = getBestWinningStreak[0].user_id || null;
+      await sequelize.query(
+        "SET @current_user = NULL, @current_streak = 0, @last_game_id = NULL, @last_profit = NULL;",
+        { type: sequelize.QueryTypes.RAW }
+      );
+
+      const currentWinStreak = await sequelize.query(
+        `
+        SELECT user_id, MAX(current_streak) AS current_streak FROM (
+            SELECT 
+                user_id,
+                game_id,
+                profit,
+                IF(@current_user = user_id AND @last_game_id + 1 = game_id AND profit > 0, 
+                   @current_streak := IF(profit > 0, @current_streak + 1, @current_streak),
+                   @current_streak := IF(profit > 0, 1, 0)
+                ) AS current_streak,
+                @last_game_id := game_id,
+                @last_profit := profit,
+                @current_user := user_id
+            FROM 
+                usergames
+            WHERE 
+                user_id = :userId AND league_id = :leagueId AND profit > 0
+            ORDER BY 
+                user_id, game_id DESC
+        ) AS sub
+        GROUP BY user_id
+        ORDER BY current_streak DESC
+        LIMIT 1;
+      `,
+
+        {
+          replacements: {
+            userId: user_id,
+            leagueId: leagueId,
+          },
+          type: sequelize.QueryTypes.SELECT,
+        }
+      );
+
+      const winns = await UserGameModel.count({
+        where: {
+          league_id: leagueId,
+          user_id: user_id,
+          profit: { [Sequelize.Op.gt]: 0 },
+        },
+      });
+      const loss = await UserGameModel.count({
+        where: {
+          league_id: leagueId,
+          user_id: user_id,
+          profit: { [Sequelize.Op.lt]: 0 },
+        },
+      });
+      const ratio = (winns / (winns + loss)) * 100;
+
+      bestWinningStreakUser = {
+        id: getBestWinningStreak[0].user_id,
+        nickName: bestWinningStreakUser.nickName,
+        image: bestWinningStreakUser.image,
+        titleValue: getBestWinningStreak[0].max_streak,
+        subTitleValue: currentWinStreak?.[0]?.current_streak || 0,
+        subTitle2Value: ratio.toFixed(2),
+      };
+    }
+
     res.status(200).json([
       {
         id: 1,
         title: "Total Profit",
         apiRoute: "totalProfit",
+        cardTitle: "Profit",
         subTitle: "Total Games",
         subTitle2: "Average Profit",
         values: formattedStats,
@@ -351,6 +464,7 @@ exports.getMainCardsStats = async (req, res) => {
         id: 2,
         title: "Top 10 Profits",
         apiRoute: "top10Profits",
+        cardTitle: "Profit",
         subTitle: "Buy In",
         subTitle2: "Date",
         values: maxProfit,
@@ -359,6 +473,8 @@ exports.getMainCardsStats = async (req, res) => {
         id: 3,
         title: "Profit Per Hour",
         apiRoute: "profitPerHour",
+        cardTitle: "Profit",
+
         subTitle: "Hours Played",
         subTitle2: "Buy In Per Hour",
         values: formattedHighestProfitPerHour,
@@ -367,9 +483,20 @@ exports.getMainCardsStats = async (req, res) => {
         id: 4,
         title: "Top 10 Comebacks",
         apiRoute: "top10Comebacks",
+        cardTitle: "Profit",
+
         subTitle: "Buy In",
         subTitle2: "Date",
         values: formattedBiggestComeback,
+      },
+      {
+        id: 5,
+        title: "Winning Streak",
+        apiRoute: "winningStreak",
+        cardTitle: "Max Streak",
+        subTitle: "Current Streak",
+        subTitle2: "Win Rate %",
+        values: bestWinningStreakUser,
       },
     ]);
   } catch (error) {
@@ -491,6 +618,63 @@ exports.top10ProfitsForCard = async (req, res) => {
     res.status(200).json(formattedTop10Profits);
   } catch (error) {
     console.error("Error retrieving top 10 profits for card:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.top10Comebacks = async (req, res) => {
+  //get the top 10 biggest comebacks:
+  // players who had the biggest buy in amount and profit was > 0
+  const leagueId = req.params.leagueId;
+
+  try {
+    const top10Comebacks = await UserGameModel.findAll({
+      attributes: [
+        "user_id",
+        [Sequelize.fn("max", Sequelize.col("buy_ins_amount")), "buyIn"],
+        [Sequelize.fn("max", Sequelize.col("profit")), "profit"],
+        "created_at",
+      ],
+      where: { league_id: leagueId, profit: { [Sequelize.Op.gt]: 0 } },
+      group: ["user_id", "created_at"],
+      include: [
+        {
+          model: UserModel,
+          attributes: ["nickName", "image"],
+        },
+      ],
+      order: [[Sequelize.literal("buyIn"), "DESC"]],
+      limit: 10,
+      raw: true,
+    });
+
+    if (!top10Comebacks.length) {
+      res.status(404).json("No data found");
+      return;
+    }
+
+    const formattedTop10Comebacks = top10Comebacks.map((player) => {
+      const formattedDate = dayjs(player.created_at).format("DD/MM/YY");
+
+      const id = player.user_id;
+      const nickName = player["User.nickName"];
+      const image = player["User.image"];
+      const title = Number(player.profit);
+      const subTitle = player.buyIn;
+      const subTitle2 = formattedDate;
+      return {
+        id,
+        nickName,
+        image,
+        title,
+        subTitle,
+        subTitle2,
+      };
+    });
+
+    res.status(200).json(formattedTop10Comebacks);
+  } catch (error) {
+    console.error("Error retrieving top 10 comebacks:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
