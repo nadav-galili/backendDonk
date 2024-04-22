@@ -8,6 +8,10 @@ const { Sequelize } = require("sequelize");
 const UserGameModel = require("../models/UserGame");
 const dayjs = require("dayjs");
 const sequelize = require("../db");
+const {
+  calculateStreaks,
+  calculateWinnLossRatio,
+} = require("../utils/statsUtils");
 
 exports.profitPerHour = async (req, res) => {
   const leagueId = req.params.leagueId;
@@ -676,5 +680,43 @@ exports.top10Comebacks = async (req, res) => {
   } catch (error) {
     console.error("Error retrieving top 10 comebacks:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+exports.winningStreak = async (req, res) => {
+  const leagueId = req.params.leagueId;
+
+  try {
+    const games = await UserGameModel.findAll({
+      attributes: ["user_id", "game_id", "profit", "created_at"],
+      where: { league_id: leagueId, profit: { [Sequelize.Op.gt]: 0 } },
+      order: ["user_id", "game_id"],
+      include: [
+        {
+          model: UserModel,
+          attributes: ["id", "image", "nickName"],
+        },
+      ],
+    });
+
+    let streaks = calculateStreaks(games);
+
+    streaks = await Promise.all(
+      streaks.map(async (player) => {
+        const ratio = await calculateWinnLossRatio(player.id, leagueId);
+        return {
+          ...player,
+          subTitle2: ratio,
+        };
+      })
+    );
+
+    streaks.sort((a, b) => b.title.localeCompare(a.title));
+
+    ///get
+    res.status(200).json(streaks);
+  } catch (error) {
+    console.error("Error calculating streaks:", error);
+    res.status(500).send("Error calculating streaks");
   }
 };
