@@ -12,4 +12,5 @@ router.post("/signup", upload.single("image"), userController.signup);
 router.post("/login", userController.login);
 //get my user info
 router.get("/me", userController.me);
+router.get("/personalStats/:userId", auth, userController.personalStats);
 module.exports = router;
