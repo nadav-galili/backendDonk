@@ -234,6 +234,13 @@ exports.personalStats = async function (req, res) {
           ),
           "minProfit",
         ],
+        [
+          UserGameModel.sequelize.fn(
+            "MIN",
+            UserGameModel.sequelize.col("season_rank")
+          ),
+          "maxSeasonRank",
+        ],
       ],
     });
 
@@ -294,6 +301,28 @@ exports.personalStats = async function (req, res) {
             "ROUND",
             UserGameModel.sequelize.fn(
               "AVG",
+              UserGameModel.sequelize.col("game_rank")
+            ),
+            2
+          ),
+          "avgGameRank",
+        ],
+        [
+          UserGameModel.sequelize.fn(
+            "ROUND",
+            UserGameModel.sequelize.fn(
+              "AVG",
+              UserGameModel.sequelize.col("season_rank")
+            ),
+            2
+          ),
+          "avgSeasonRank",
+        ],
+        [
+          UserGameModel.sequelize.fn(
+            "ROUND",
+            UserGameModel.sequelize.fn(
+              "AVG",
               UserGameModel.sequelize.literal(
                 "TIMESTAMPDIFF(MINUTE, created_at, cash_out_time)/60"
               )
@@ -343,6 +372,8 @@ exports.personalStats = async function (req, res) {
         totalStats[0].dataValues.totalGames) *
         100
     ).toFixed(2);
+    totalStats[0].dataValues.maxSeasonRank =
+      userMaxMinProfit[0].dataValues.maxSeasonRank;
 
     res.status(200).json({
       totalStats,
