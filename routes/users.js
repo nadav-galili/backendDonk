@@ -5,12 +5,18 @@ const auth = require("../middleware/auth");
 const userController = require("../controllers/users");
 const upload = userController.upload;
 
-//signup
+// Signup route with image upload
 router.post("/signup", upload.single("image"), userController.signup);
 
-//login
+// Other routes
 router.post("/login", userController.login);
-//get my user info
 router.get("/me", userController.me);
 router.get("/personalStats/:userId", auth, userController.personalStats);
+router.put(
+  "/updatePersonaldetails",
+  auth,
+  upload.single("image"),
+  userController.updatePersonaldetails
+);
+
 module.exports = router;

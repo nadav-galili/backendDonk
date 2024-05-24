@@ -7,7 +7,7 @@ const GameModel = require("../models/Game");
 const { Sequelize } = require("sequelize");
 const UserGameModel = require("../models/UserGame");
 const dayjs = require("dayjs");
-const sequelize = require("../db");
+const { sequelize } = require("../db");
 const {
   calculateStreaks,
   calculateWinnLossRatio,

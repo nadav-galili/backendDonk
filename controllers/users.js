@@ -1,37 +1,49 @@
 const multer = require("multer");
-const path = require("path");
+// const path = require("path");
 const bcrypt = require("bcrypt");
 const UserModel = require("../models/User");
 const UserGameModel = require("../models/UserGame");
 const LeagueModel = require("../models/League");
 const UserLeaguemodel = require("../models/UserLeague");
 const { Sequelize } = require("sequelize");
+const { s3 } = require("../db");
 
 const {
   calculateStreaks,
   calculateWinnLossRatio,
 } = require("../utils/statsUtils");
 const jwt = require("jsonwebtoken");
-const sequelize = require("../db");
+// const { sequelize } = require("../db");/
 require("dotenv").config();
 
 // Define multer storage utilsuration
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
-  filename: function (req, file, cb) {
-    let ext = path.extname(file.originalname);
-    let fileName = path.basename(file.originalname.replace(/\s/g, ""), ext);
-    cb(null, fileName + "-" + Date.now() + ext);
-  },
-});
-
+const storage = multer.memoryStorage();
 // Create the multer upload instance
 const upload = multer({
   storage: storage,
   limits: { fileSize: 10000000 },
 });
+
+const uploadImageToS3 = async (file) => {
+  if (!file || !file.buffer) {
+    throw new Error("File or file buffer is missing");
+  }
+  const params = {
+    Bucket: process.env.S3_BUCKET_NAME || config.S3_BUCKET_NAME,
+    Key: `uploads/${Date.now()}_${file.originalname}`,
+    Body: file.buffer,
+    ContentType: file.mimetype,
+    ACL: "public-read", // Use 'private' if you do not want public access
+  };
+
+  try {
+    const data = await s3.upload(params).promise();
+    return data.Location; // This is the public URL
+  } catch (err) {
+    console.error(err);
+    throw new Error("Error uploading file to S3");
+  }
+};
 
 exports.signup = async function (req, res) {
   const { password, nickName } = req.body;
@@ -42,33 +54,81 @@ exports.signup = async function (req, res) {
     if (existingUser) {
       return res.status(400).json({ error: "User already exists." });
     }
+
     const hashedPassword = await bcrypt.hash(password, 12);
+    let imageUrl = "uploads/anonymos.png";
+
+    if (req.file) {
+      imageUrl = await uploadImageToS3(req.file);
+    }
+
     const newUser = await UserModel.create({
       password: hashedPassword,
       nickName,
-      image: req.file?.path.trim() ?? "uploads/anonymos.png",
+      image: imageUrl ?? "uploads/anonymos.png",
     });
 
-    //generate token
+    // Generate token
     const jwtKey = process.env.JWTKEY;
-
     const token = jwt.sign(
-      { userId: newUser.id, nickName: newUser.nickName },
+      { userId: newUser.id, nickName: newUser.nickName, image: newUser.image },
       jwtKey
     );
 
     newUser.dataValues.token = token;
-
-    const { file } = req;
-    if (file) {
-      console.log("File:", file);
-    }
 
     delete newUser.dataValues.password;
 
     res.status(200).json({ message: "Signup successful", user: newUser });
   } catch (err) {
     console.error("Error during signup:", err);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+exports.updatePersonaldetails = async function (req, res) {
+  console.log("🚀 ~ req:", req.body);
+  const { nickName, userId } = req.body;
+  const { file } = req;
+  if (file) {
+    console.log("File:", file);
+  }
+
+  try {
+    const user = await UserModel.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const oldImage = user.image;
+
+    const updatedUser = await UserModel.update(
+      {
+        nickName,
+        image: req.file?.path.trim() ?? user.image,
+      },
+      { where: { id: userId } }
+    );
+
+    if (oldImage !== "uploads/anonymos.png") {
+      const fs = require("fs");
+      fs.unlinkSync(oldImage);
+    }
+
+    const jwtKey = process.env.JWTKEY;
+    ///get existing token
+    const token = jwt.sign(
+      { userId: user.id, nickName: user.nickName, image: user.image },
+      jwtKey
+    );
+    console.log("🚀 ~ token:", token);
+    //get user's token
+
+    res
+      .status(200)
+      .json({ message: "User updated.", token: token, user: updatedUser });
+  } catch (err) {
+    console.error("Error during updatePersonaldetails:", err);
     res.status(500).json({ message: "Internal server error." });
   }
 };
