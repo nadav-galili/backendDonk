@@ -16,7 +16,6 @@ const UserGames = sequelize.define(
     },
     game_id: {
       type: DataTypes.INTEGER,
-
       allowNull: false,
     },
     buy_ins_number: {
@@ -56,11 +55,15 @@ const UserGames = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
+    league_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
   {
     sequelize,
     modelName: "UserGames",
-    tableName: "usergames",
+    tableName: "user_games",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

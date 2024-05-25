@@ -13,7 +13,6 @@ const {
   calculateWinnLossRatio,
 } = require("../utils/statsUtils");
 const jwt = require("jsonwebtoken");
-// const { sequelize } = require("../db");/
 require("dotenv").config();
 
 // Define multer storage utilsuration
@@ -25,9 +24,6 @@ const upload = multer({
 });
 
 const uploadImageToS3 = async (file) => {
-  if (!file || !file.buffer) {
-    throw new Error("File or file buffer is missing");
-  }
   const params = {
     Bucket: process.env.S3_BUCKET_NAME || config.S3_BUCKET_NAME,
     Key: `uploads/${Date.now()}_${file.originalname}`,
@@ -56,10 +52,12 @@ exports.signup = async function (req, res) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    let imageUrl = "uploads/anonymos.png";
+    let imageUrl = null;
 
     if (req.file) {
       imageUrl = await uploadImageToS3(req.file);
+      imageUrl = imageUrl.split("uploads/");
+      imageUrl = "uploads/" + imageUrl[1];
     }
 
     const newUser = await UserModel.create({

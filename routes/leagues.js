@@ -4,7 +4,6 @@ const auth = require("../middleware/auth");
 const leagueController = require("../controllers/league");
 const upload = leagueController.upload;
 
-///REPLACE AUTHHHHHH
 router.get("/myLeagues/", auth, leagueController.myLeagues);
 
 router.post(

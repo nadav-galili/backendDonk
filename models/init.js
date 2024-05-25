@@ -44,7 +44,7 @@ UserModel.belongsToMany(GameModel, {
 UserGameModel.belongsTo(UserModel, { foreignKey: "user_id" });
 UserGameModel.belongsTo(GameModel, { foreignKey: "game_id" });
 UserGameModel.belongsTo(LeagueModel, { foreignKey: "league_id" });
-GameModel.hasMany(UserGameModel, { foreignKey: "game_id", as: "userGames" });
+GameModel.hasMany(UserGameModel, { foreignKey: "game_id", as: "user_games" });
 UserModel.hasMany(GameDetailsModel, {
   foreignKey: "user_id",
   as: "userGamesDetails",

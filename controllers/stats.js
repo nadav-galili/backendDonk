@@ -247,7 +247,7 @@ exports.getMainCardsStats = async (req, res) => {
       attributes: [
         [Sequelize.fn("max", Sequelize.col("profit")), "titleValue"],
         [Sequelize.col("buy_ins_amount"), "subTitleValue"],
-        [Sequelize.col("userGames.created_at"), "subTitle2Value"],
+        [Sequelize.col("UserGames.created_at"), "subTitle2Value"],
       ],
       where: { league_id: leagueId },
       include: [
@@ -256,7 +256,7 @@ exports.getMainCardsStats = async (req, res) => {
           attributes: ["nickName", "image"],
         },
       ],
-      group: ["user_id", "buy_ins_amount", "userGames.created_at"], // Add the 'buy_ins_amount' column to the GROUP BY clause
+      group: ["user_id", "buy_ins_amount", "UserGames.created_at"], // Add the 'buy_ins_amount' column to the GROUP BY clause
       order: [[Sequelize.literal("titleValue"), "DESC"]],
       raw: true,
     });
@@ -365,7 +365,7 @@ exports.getMainCardsStats = async (req, res) => {
               @last_game_id := game_id,
               @current_user := user_id
           FROM 
-              usergames
+              user_games
           WHERE 
               league_id = :leagueId AND profit > 0
           ORDER BY 
@@ -408,7 +408,7 @@ exports.getMainCardsStats = async (req, res) => {
                 @last_profit := profit,
                 @current_user := user_id
             FROM 
-                usergames
+                user_games
             WHERE 
                 user_id = :userId AND league_id = :leagueId AND profit > 0
             ORDER BY 
@@ -580,7 +580,7 @@ exports.top10ProfitsForCard = async (req, res) => {
         "user_id",
         [Sequelize.fn("sum", Sequelize.col("profit")), "totalProfit"],
         [Sequelize.fn("max", Sequelize.col("buy_ins_amount")), "buyInAmount"],
-        [Sequelize.col("userGames.created_at"), "gameDate"],
+        [Sequelize.col("UserGames.created_at"), "gameDate"],
       ],
       where: { league_id: leagueId },
       include: [
@@ -589,7 +589,7 @@ exports.top10ProfitsForCard = async (req, res) => {
           attributes: ["nickName", "image"],
         },
       ],
-      group: ["user_id", "buy_ins_amount", "userGames.created_at"], // Add the 'buy_ins_amount' column to the GROUP BY clause
+      group: ["user_id", "buy_ins_amount", "UserGames.created_at"], // Add the 'buy_ins_amount' column to the GROUP BY clause
       order: [[Sequelize.literal("totalProfit"), "DESC"]],
       limit: 10,
       raw: true,

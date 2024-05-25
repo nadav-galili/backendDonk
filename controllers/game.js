@@ -338,7 +338,7 @@ exports.getAllGames = async (req, res) => {
       include: [
         {
           model: UserGameModel,
-          as: "userGames",
+          as: "user_games",
           attributes: [
             "game_id",
             "profit",
@@ -358,7 +358,7 @@ exports.getAllGames = async (req, res) => {
       ],
       order: [
         ["id", "DESC"], // This orders the Games by id in descending order
-        [{ model: UserGameModel, as: "userGames" }, "game_rank", "ASC"], // This orders the nested UserGames by game_rank in ascending order
+        [{ model: UserGameModel, as: "user_games" }, "game_rank", "ASC"], // This orders the nested UserGames by game_rank in ascending order
       ],
       limit,
       offset,

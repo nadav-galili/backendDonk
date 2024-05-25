@@ -27,7 +27,7 @@ const UserLeague = sequelize.define(
   {
     sequelize,
     modelName: "UserLeague",
-    tableName: "userleagues",
+    tableName: "user_leagues",
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",

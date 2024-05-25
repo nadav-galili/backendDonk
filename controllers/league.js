@@ -5,26 +5,34 @@ const UserLeagueModel = require("../models/UserLeague");
 const LeagueModel = require("../models/League");
 const { generateLeagueNumber } = require("../models/League");
 const multer = require("multer");
-const path = require("path");
-// const { Sequelize } = require("sequelize");
+const { s3 } = require("../db");
+require("dotenv").config();
 
 // Define multer storage utilsuration
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "leagueAvatars/");
-  },
-  filename: function (req, file, cb) {
-    let ext = path.extname(file.originalname);
-    let fileName = path.basename(file.originalname.replace(/\s/g, ""), ext);
-    cb(null, fileName + "-" + Date.now() + ext);
-  },
-});
-
+const storage = multer.memoryStorage();
 // Create the multer upload instance
 const upload = multer({
   storage: storage,
   limits: { fileSize: 10000000 },
 });
+
+const uploadImageToS3 = async (file) => {
+  const params = {
+    Bucket: process.env.S3_BUCKET_NAME || config.S3_BUCKET_NAME,
+    Key: `leagueAvatars/${Date.now()}_${file.originalname}`,
+    Body: file.buffer,
+    ContentType: file.mimetype,
+    ACL: "public-read", // Use 'private' if you do not want public access
+  };
+
+  try {
+    const data = await s3.upload(params).promise();
+    return data.Location; // This is the public URL
+  } catch (err) {
+    console.error(err);
+    throw new Error("Error uploading file to S3");
+  }
+};
 
 // Export the upload instance to be used in the router file
 exports.upload = upload;
@@ -98,16 +106,18 @@ exports.myLeagues = async (req, res) => {
 };
 
 exports.createLeague = async (req, res) => {
+  const { leagueName, userId } = req.body;
+  let imageUrl = null;
   const { file } = req;
   if (file) {
-    console.log("File:", file);
+    imageUrl = await uploadImageToS3(req.file);
+    imageUrl = imageUrl.split("leagueAvatars/");
+    imageUrl = "leagueAvatars/" + imageUrl[1];
   }
-  const { leagueName, userId } = req.body;
-
   try {
     const newLeague = await LeagueModel.create({
       league_name: leagueName,
-      league_image: req.file?.path ?? "leagueAvatars/league.jpg",
+      league_image: imageUrl ?? "leagueAvatars/league.jpg",
       admin_id: userId,
       league_number: await generateLeagueNumber(LeagueModel),
     });
