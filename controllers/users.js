@@ -6,7 +6,8 @@ const UserGameModel = require("../models/UserGame");
 const LeagueModel = require("../models/League");
 const UserLeaguemodel = require("../models/UserLeague");
 const { Sequelize } = require("sequelize");
-const { s3 } = require("../db");
+const { s3 } = require("../db"); // Ensure s3 is correctly imported
+require("dotenv").config();
 
 const {
   calculateStreaks,
@@ -84,13 +85,24 @@ exports.signup = async function (req, res) {
   }
 };
 
+const deleteImageFromS3 = async (url) => {
+  const key = url.split("/").slice(-2).join("/");
+  const params = {
+    Bucket: process.env.S3_BUCKET_NAME,
+    Key: key,
+  };
+
+  try {
+    await s3.deleteObject(params).promise();
+    console.log(`File deleted successfully from S3: ${url}`);
+  } catch (err) {
+    console.error("Error during S3 delete:", err);
+  }
+};
+
 exports.updatePersonaldetails = async function (req, res) {
-  console.log("🚀 ~ req:", req.body);
   const { nickName, userId } = req.body;
   const { file } = req;
-  if (file) {
-    console.log("File:", file);
-  }
 
   try {
     const user = await UserModel.findByPk(userId);
@@ -98,33 +110,33 @@ exports.updatePersonaldetails = async function (req, res) {
       return res.status(404).json({ message: "User not found." });
     }
 
-    const oldImage = user.image;
-
-    const updatedUser = await UserModel.update(
-      {
-        nickName,
-        image: req.file?.path.trim() ?? user.image,
-      },
-      { where: { id: userId } }
-    );
-
-    if (oldImage !== "uploads/anonymos.png") {
-      const fs = require("fs");
-      fs.unlinkSync(oldImage);
+    let imageUrl = user.image;
+    if (file) {
+      console.log("File object:", file); // Debugging line
+      imageUrl = await uploadImageToS3(file);
+      imageUrl = imageUrl.split("uploads/");
+      imageUrl = "uploads/" + imageUrl[1];
+      // If there was an old image and it's not the default, delete it from S3
+      if (user.image && user.image !== "uploads/anonymos.png") {
+        await deleteImageFromS3(user.image);
+      }
     }
 
+    await user.update({
+      nickName,
+      image: imageUrl,
+    });
+
+    // Generate a new token with updated user details
     const jwtKey = process.env.JWTKEY;
-    ///get existing token
     const token = jwt.sign(
       { userId: user.id, nickName: user.nickName, image: user.image },
       jwtKey
     );
-    console.log("🚀 ~ token:", token);
-    //get user's token
 
-    res
-      .status(200)
-      .json({ message: "User updated.", token: token, user: updatedUser });
+  
+
+    res.status(200).json({ message: "User updated.", token: token, user });
   } catch (err) {
     console.error("Error during updatePersonaldetails:", err);
     res.status(500).json({ message: "Internal server error." });
@@ -445,3 +457,29 @@ exports.personalStats = async function (req, res) {
     res.status(500).json({ message: "Internal server error." });
   }
 };
+
+
+
+exports.expoPushTokens = async function (req, res) {
+ 
+  const { expoPushToken } = req.body;
+  const { userId } = req.params;
+ 
+ 
+  try {
+    const user = await UserModel.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+  await user.update({
+    expoPushToken: expoPushToken,
+  });
+
+
+    res.status(200).json({ message: "Expo push token updated." });
+  } catch (err) {
+    console.error("Error during updatePersonaldetails:", err);
+    res.status(500).json({ message: "Internal server error." });
+  }
+  
+}

@@ -41,6 +41,10 @@ User.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    expoPushToken:{
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,

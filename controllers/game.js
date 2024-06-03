@@ -2,9 +2,11 @@ const GameModel = require("../models/Game");
 const UserGameModel = require("../models/UserGame");
 const GameDetailsModel = require("../models/GameDetails");
 const UserModel = require("../models/User");
+const LeagueModel = require("../models/League");
 const Sequelize = require("sequelize");
 const gameUtils = require("../utils/gameUtils");
 // const User = require("../models/User");
+const {sendLeagueNotification} = require('../utils/pushNotification')
 const dayJs = require("dayjs");
 
 exports.newGame = async (req, res) => {
@@ -14,6 +16,10 @@ exports.newGame = async (req, res) => {
     return res.status(400).json({ message: "missing data", data: req.body });
 
   try {
+
+    const league = await LeagueModel.findOne({
+      where: { id: leagueId },
+    });
     const game = await GameModel.create({
       league_id: leagueId,
       isOpen: true,
@@ -45,6 +51,10 @@ exports.newGame = async (req, res) => {
         gameDetails.push(newGameDetails);
       })
     );
+
+
+    const message = `New game created in the league ${league.league_name}`;
+    await sendLeagueNotification(leagueId, message);
 
     return res.status(200).json({
       message: `Game number ${game.id} created`,
@@ -192,7 +202,7 @@ exports.getGameDetails = async (req, res) => {
 
 exports.cashOutPlayer = async (req, res) => {
   const { userId, gameId, cashOutAmount } = req.body;
-  console.log("cashOutPlayer", req.body);
+ 
 
   await UserGameModel.update(
     {
@@ -301,7 +311,8 @@ exports.endGame = async (req, res) => {
     console.error("Error ending game:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-
+  const message = ` Game ${gameId} ended`;
+  await sendLeagueNotification(leagueId, message);
   res.status(200).json({ message: `Game ${gameId} ended` });
 };
 

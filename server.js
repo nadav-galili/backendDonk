@@ -6,6 +6,7 @@ const leagues = require("./routes/leagues");
 const games = require("./routes/games");
 const auth = require("./routes/auth");
 const stats = require("./routes/stats");
+const pushNotifications = require("./routes/pushNotifications");
 const path = require("path");
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/api/users", users);
 app.use("/api/leagues", leagues);
 app.use("/api/games", games);
 app.use("/api/stats", stats);
+app.use("/api/pushNotifications", pushNotifications);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(
   "/leagueAvatars",
