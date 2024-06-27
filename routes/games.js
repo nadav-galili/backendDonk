@@ -20,4 +20,5 @@ router.put("/cashOutPlayer", auth, gameController.cashOutPlayer);
 router.put("/endGame", auth, gameController.endGame);
 router.get("/getAllGamesForLeague/", auth, gameController.getAllGames);
 router.get("/checkIfOpenGameExist", auth, gameController.checkIfOpenGameExist);
+router.put("/addRemovePlayersFromGame", auth, gameController.addRemovePlayersFromGame);
 module.exports = router;

@@ -31,7 +31,9 @@ exports.sendLeagueNotification = async (leagueId, message) => {
       data: { id: leagueId, league: league } ,
     };
  
-    await sendPushNotification(messageObject);
+    setTimeout(() => {
+      sendPushNotification(messageObject);
+  }, 10000);
   }
 
 const sendPushNotification = async (messageObject) => {

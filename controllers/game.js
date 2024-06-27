@@ -4,6 +4,7 @@ const GameDetailsModel = require("../models/GameDetails");
 const UserModel = require("../models/User");
 const LeagueModel = require("../models/League");
 const Sequelize = require("sequelize");
+const { sequelize } = require("../db");
 const gameUtils = require("../utils/gameUtils");
 // const User = require("../models/User");
 const {sendLeagueNotification} = require('../utils/pushNotification')
@@ -54,7 +55,7 @@ exports.newGame = async (req, res) => {
 
 
     const message = `New game created in the league ${league.league_name}`;
-    await sendLeagueNotification(leagueId, message);
+   await sendLeagueNotification(leagueId, message);
 
     return res.status(200).json({
       message: `Game number ${game.id} created`,
@@ -307,11 +308,12 @@ exports.endGame = async (req, res) => {
         );
       })
     );
+
   } catch (error) {
     console.error("Error ending game:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
-  const message = ` Game ${gameId} ended`;
+  const message = ` Game ended in the league ${league.league_name}`;
   await sendLeagueNotification(leagueId, message);
   res.status(200).json({ message: `Game ${gameId} ended` });
 };
@@ -435,3 +437,111 @@ exports.checkIfOpenGameExist = async (req, res) => {
     gameDetails,
   });
 };
+
+
+exports.addRemovePlayersFromGame = async (req, res) => {
+   const { gameId, selectedPlayers, leagueId } = req.body;
+   if(!selectedPlayers || !leagueId || !gameId) return res.status(400).json({message: "missing data", data: req.body});
+
+  try {
+    
+    await sequelize.transaction(async (t) => {
+
+          ///get all data from gameDetails for this game... then iterate on 'selectedPlayers' and check if the player exists in the gameDetails, if not create a new record
+          /// if the player exists in the gameDetails, do nothing
+          //if player exists in gameDetails, check if the player exists in UserGame, if not create a new record
+          ///if player dont exist in selectedPlayers, delete the record from gameDetails and UserGame
+          // 1. Get all game details for the game
+          // 2. Iterate over selectedPlayers
+          // 3. Check if player exists in GameDetails
+          // 4. If player doesn't exist, create a new record
+          // 5. Check if player exists in UserGame
+          // 6. If player doesn't exist, create a new record
+          // 7. If player doesn't exist in selectedPlayers, delete the record from GameDetails and UserGame
+        const  gameDetails = await GameDetailsModel.findAll({
+            where: {
+              game_id: gameId,
+            },
+          });
+          const gameDetailsUserIds = gameDetails.map((gameDetail) => gameDetail.user_id);
+          const selectedPlayersUserIds = selectedPlayers.map((player) => player.user_id);
+          const playersToAdd = selectedPlayers.filter((player) => !gameDetailsUserIds.includes(player.user_id));
+          const playersToRemove = gameDetails.filter((gameDetail) => !selectedPlayersUserIds.includes(gameDetail.user_id));
+          // const playersToUpdate = selectedPlayers.filter((player) => gameDetailsUserIds.includes(player.user_id));
+          const userGames = [];
+          const newGameDetails = [];
+          const deletedGameDetails = [];
+          const deletedUserGames = [];
+          // Add new players to the game
+          await Promise.all(
+            playersToAdd.map(async (player) => {
+              const newUserGame = await gameUtils.createUserGame(
+                player,
+                { id: gameId },
+                leagueId
+              );
+              const newGameDetail = await gameUtils.createGameDetails(
+                player,
+                { id: gameId },
+                leagueId
+              );
+              const user = await gameUtils.getUserData(player.user_id);
+              newUserGame.dataValues.User = user.dataValues;
+              newGameDetail.dataValues.User = user.dataValues;
+              userGames.push(newUserGame);
+              newGameDetails.push(newGameDetail);
+            })
+          );
+          // Remove players from the game
+          await Promise.all(
+            playersToRemove.map(async (gameDetail) => {
+              await GameDetailsModel.destroy({
+                where: {
+                  id: gameDetail.id,
+                },
+              });
+              await UserGameModel.destroy({
+                where: {
+                  user_id: gameDetail.user_id,
+                  game_id: gameId,
+                },
+              });
+              deletedGameDetails.push(gameDetail);
+              deletedUserGames.push(gameDetail.user_id);
+            })
+          );
+          console.log("🚀 ~ playersToRemove.map ~ playersToRemove:", playersToRemove)
+          console.log("🚀 ~ playersToRemove.map ~ deletedGameDetails:", deletedGameDetails
+          )
+          console.log("🚀 ~ playersToRemove.map ~ deletedUserGames:", deletedUserGames
+
+          )
+          console.log("🚀 ~ playersToRemove.map ~ newGameDetails:", newGameDetails
+          )
+
+          // return { userGames, newGameDetails, deletedGameDetails, deletedUserGames };
+        
+
+
+
+
+
+
+
+        });
+
+    return res.status(200).json({ message: "Players added to game successfully" });
+  } catch (error) {
+    console.error("Error adding players to game:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+  
+    
+
+    
+  
+   
+
+
+
+}

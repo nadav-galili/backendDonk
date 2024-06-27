@@ -1,4 +1,4 @@
-const  { Expo } =require('expo-server-sdk')
+// const  { Expo } =require('expo-server-sdk')
 const {sendLeagueNotification} = require('../utils/pushNotification')
 
 
