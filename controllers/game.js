@@ -467,7 +467,6 @@ exports.addRemovePlayersFromGame = async (req, res) => {
           const selectedPlayersUserIds = selectedPlayers.map((player) => player.user_id);
           const playersToAdd = selectedPlayers.filter((player) => !gameDetailsUserIds.includes(player.user_id));
           const playersToRemove = gameDetails.filter((gameDetail) => !selectedPlayersUserIds.includes(gameDetail.user_id));
-          // const playersToUpdate = selectedPlayers.filter((player) => gameDetailsUserIds.includes(player.user_id));
           const userGames = [];
           const newGameDetails = [];
           const deletedGameDetails = [];
@@ -510,27 +509,40 @@ exports.addRemovePlayersFromGame = async (req, res) => {
               deletedUserGames.push(gameDetail.user_id);
             })
           );
-          console.log("🚀 ~ playersToRemove.map ~ playersToRemove:", playersToRemove)
-          console.log("🚀 ~ playersToRemove.map ~ deletedGameDetails:", deletedGameDetails
-          )
-          console.log("🚀 ~ playersToRemove.map ~ deletedUserGames:", deletedUserGames
-
-          )
-          console.log("🚀 ~ playersToRemove.map ~ newGameDetails:", newGameDetails
-          )
-
-          // return { userGames, newGameDetails, deletedGameDetails, deletedUserGames };
+          
+        });
         
+                  const updatedGameDetails = await GameDetailsModel.findAll({
+                    where: {
+                      game_id: gameId,
+                    },
+                    include: [
+                      {
+                        model: UserModel,
+                        as: "User",
+                        attributes: ["id", "nickName", "image"],
+                      },
+                    ],
+                  });
+                  const updatedUserGames = await UserGameModel.findAll({
+                    where: {
+                      game_id: gameId,
+                    },
+                    include: [
+                      {
+                        model: UserModel,
+                        as: "User",
+                        attributes: ["id", "nickName", "image"],
+                      },
+                    ],
+                  });
 
-
-
-
-
+        return res.status(200).json({
+          message: `Players added/removed from game ${gameId}`,
+         updatedGameDetails ,updatedUserGames
 
 
         });
-
-    return res.status(200).json({ message: "Players added to game successfully" });
   } catch (error) {
     console.error("Error adding players to game:", error);
     return res.status(500).json({ message: "Internal server error" });
