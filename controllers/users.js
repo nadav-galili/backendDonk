@@ -166,8 +166,8 @@ exports.me = async function (req, res) {
 };
 
 exports.login = async function (req, res) {
-  const { password, nickName } = req.body;
-
+  let { password, nickName } = req.body;
+ 
   try {
     const existingUser = await UserModel.findOne({ where: { nickName } });
 
@@ -446,6 +446,7 @@ exports.personalStats = async function (req, res) {
       userMaxMinProfit[0].dataValues.maxSeasonRank;
 
     res.status(200).json({
+      message: "Personal stats found.",
       totalStats,
       games,
       streaksData,

@@ -11,7 +11,9 @@ const {sendLeagueNotification} = require('../utils/pushNotification')
 const dayJs = require("dayjs");
 
 exports.newGame = async (req, res) => {
+  
   const { selectedPlayers, leagueId, gameAdminId } = req.body;
+  
 
   if (!selectedPlayers || !leagueId || !gameAdminId)
     return res.status(400).json({ message: "missing data", data: req.body });
@@ -44,15 +46,22 @@ exports.newGame = async (req, res) => {
         );
 
         const user = await gameUtils.getUserData(player.user_id);
-
+      
+        const gameManager = await UserModel.findOne({
+          where: {
+            id: gameAdminId,
+          },
+          attributes: ["id", "nickName", "image"],
+        });
+        game.dataValues.gameManager = gameManager;
         newUserGame.dataValues.User = user.dataValues;
         newGameDetails.dataValues.User = user.dataValues;
 
         userGames.push(newUserGame);
         gameDetails.push(newGameDetails);
       })
-    );
 
+    );
 
     const message = `New game created in the league ${league.league_name}`;
    await sendLeagueNotification(leagueId, message);
@@ -412,6 +421,8 @@ exports.checkIfOpenGameExist = async (req, res) => {
   });
   if (!openGame)
     return res.status(404).json({ message: "No open games found" });
+
+
   const userGames = await UserGameModel.findAll({
     where: {
       game_id: openGame?.id,
@@ -424,11 +435,23 @@ exports.checkIfOpenGameExist = async (req, res) => {
       },
     ],
   });
+
   const gameDetails = await GameDetailsModel.findAll({
     where: {
       game_id: openGame?.id,
     },
   });
+
+  const gameAdminId = openGame.game_manager_id;
+
+  const gameManager = await UserModel.findOne({
+    where: {
+      id: gameAdminId,
+    },
+    attributes: ["id", "nickName", "image"],
+  });
+  openGame.dataValues.gameManager = gameManager;
+
 
   return res.status(200).json({
     message: `Game number ${openGame.id} already open `,
@@ -556,4 +579,46 @@ exports.addRemovePlayersFromGame = async (req, res) => {
 
 
 
+}
+
+
+exports.takeControllOfGame = async (req, res) => {
+  const { gameId, newAdminId } = req.body;
+  console.log("🚀 ~ exports.takeControllOfGame= ~ gameAdminId:", newAdminId)
+  console.log("🚀 ~ exports.takeControllOfGame= ~ gameId:", gameId)
+  try {
+   await GameModel.update(
+      {
+        game_manager_id: newAdminId,
+      },
+      {
+        where: {
+          id: gameId,
+        },
+      }
+    );
+    const  updatedGame = await GameModel.findOne({
+      where:{
+        id: gameId
+      }
+    }); 
+    const newGameManager = await UserModel.findOne({
+      where: {
+        id: newAdminId,
+      },
+      attributes: ["id", "nickName", "image"],
+    });
+
+ 
+    updatedGame.dataValues.gameManager = newGameManager;
+    const message = `Game admin has been changed...new admin is ${newGameManager.nickName}`;
+    await sendLeagueNotification(updatedGame.league_id, message);
+
+    return res.status(200).json({ message: `Game ${gameId} is now managed by ${newAdminId}` ,   updatedGame}
+ 
+    );
+  } catch (error) {
+    console.error("Error taking control of game:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
 }
