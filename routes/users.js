@@ -4,9 +4,19 @@ const auth = require("../middleware/auth");
 
 const userController = require("../controllers/users");
 const upload = userController.upload;
-//signup
+
+// Signup route with image upload
 router.post("/signup", upload.single("image"), userController.signup);
 
-//get my user info
-router.get("/me", auth, userController.me);
+// Other routes
+router.post("/login", userController.login);
+router.get("/me", userController.me);
+router.get("/personalStats/:userId", auth, userController.personalStats);
+router.put(
+  "/updatePersonaldetails",
+  auth,
+  upload.single("image"),
+  userController.updatePersonaldetails
+);
+router.put("/updateExpoPushToken/:userId", auth, userController.expoPushTokens);
 module.exports = router;
