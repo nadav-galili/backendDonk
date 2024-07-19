@@ -219,6 +219,13 @@ exports.personalStats = async function (req, res) {
       ],
       order: [["created_at", "DESC"]],
     });
+    console.log("🚀 ~ userGames:", userGames)
+    if(userGames.length === 0){
+      return res.status(200).json({
+        message: "No games found.",
+        games: [],
+      });
+    }
 
     // // Calculate streaks
     const streaks = calculateStreaks(userGames);
