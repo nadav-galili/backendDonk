@@ -6,6 +6,7 @@ const env = config.ENV;
 require("dotenv").config();
 
 const dbConfig = config.DB[env];
+console.log("🚀 ~ dbConfig:", dbConfig)
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID || config.AWS_ACCESS_KEY_ID,
