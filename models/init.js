@@ -11,6 +11,7 @@ UserModel.hasMany(UserLeagueModel, {
   as: "userLeagues",
 });
 UserLeagueModel.belongsTo(UserModel, { foreignKey: "user_id" });
+
 LeagueModel.hasMany(UserLeagueModel, {
   foreignKey: "league_id",
   as: "userLeagues",
@@ -19,6 +20,7 @@ UserLeagueModel.belongsTo(LeagueModel, {
   foreignKey: "league_id",
   as: "league",
 });
+
 UserModel.belongsToMany(LeagueModel, {
   through: UserLeagueModel,
   as: "leagues",
@@ -29,8 +31,10 @@ LeagueModel.belongsToMany(UserModel, {
   as: "users",
   foreignKey: "league_id",
 });
+
 LeagueModel.hasMany(GameModel, { foreignKey: "league_id", as: "games" });
 GameModel.belongsTo(LeagueModel, { foreignKey: "league_id", as: "league" });
+
 GameModel.belongsToMany(UserModel, {
   through: UserGameModel,
   as: "users",
@@ -41,10 +45,13 @@ UserModel.belongsToMany(GameModel, {
   as: "games",
   foreignKey: "user_id",
 });
+
 UserGameModel.belongsTo(UserModel, { foreignKey: "user_id" });
 UserGameModel.belongsTo(GameModel, { foreignKey: "game_id" });
 UserGameModel.belongsTo(LeagueModel, { foreignKey: "league_id" });
+
 GameModel.hasMany(UserGameModel, { foreignKey: "game_id", as: "user_games" });
+
 UserModel.hasMany(GameDetailsModel, {
   foreignKey: "user_id",
   as: "userGamesDetails",
@@ -52,6 +59,7 @@ UserModel.hasMany(GameDetailsModel, {
 GameDetailsModel.belongsTo(UserModel, { foreignKey: "user_id" });
 GameDetailsModel.belongsTo(GameModel, { foreignKey: "game_id" });
 GameDetailsModel.belongsTo(LeagueModel, { foreignKey: "league_id" });
+
 GameModel.hasMany(GameDetailsModel, {
   foreignKey: "game_id",
   as: "gameDetails",
@@ -60,9 +68,8 @@ LeagueModel.hasMany(GameDetailsModel, {
   foreignKey: "league_id",
   as: "leagueGamesDetails",
 });
+
 GameModel.belongsTo(UserModel, { foreignKey: "game_manager_id" });
-// LeagueModel.belongsTo(UserModel, { foreignKey: "admin_id" }); // Add this line
-// UserModel.hasMany(LeagueModel, { as: "userLeagues" });
 
 // Sync models
 (async () => {
