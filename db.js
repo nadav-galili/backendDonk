@@ -3,6 +3,7 @@ const config = require("./config");
 console.log("🚀 ~ config:", config)
 const AWS = require("aws-sdk");
 const env = config.ENV;
+console.log("🚀 ~ env:", env)
 require("dotenv").config();
 
 const dbConfig = config.DB[env];
