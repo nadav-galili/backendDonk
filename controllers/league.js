@@ -39,6 +39,7 @@ exports.upload = upload;
 
 exports.myLeagues = async (req, res) => {
   const userId = req.user?.userId;
+ 
   const user = await UserModel.findAll({
     where: { id: userId },
     attributes: ["id", "nickName", "image"],
@@ -55,17 +56,21 @@ exports.myLeagues = async (req, res) => {
       },
     ],
   });
+ 
 
   await Promise.all(
     user.map(async (user) => {
       await Promise.all(
         user.dataValues.userLeagues.map(async (userLeague) => {
+          if(userLeague.league.dataValues.admin_id){
           const admin = await UserModel.findOne({
             attributes: ["id", "nickName", "image"],
             where: { id: userLeague.league.dataValues.admin_id },
           });
           userLeague.league.dataValues.leagueAdmin = admin;
+        }
         })
+      
       );
     })
   );

@@ -23,6 +23,18 @@ exports.newGame = async (req, res) => {
     const league = await LeagueModel.findOne({
       where: { id: leagueId },
     });
+
+    const checkIfOpenGameExist = await GameModel.findOne({
+      where: {
+        league_id: leagueId,
+        isOpen: true,
+      },
+    });
+
+    if (checkIfOpenGameExist) {
+      return res.status(400).json({ message: "Open game already exists" });
+    }
+
     const game = await GameModel.create({
       league_id: leagueId,
       isOpen: true,

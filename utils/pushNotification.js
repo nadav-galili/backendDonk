@@ -3,6 +3,7 @@ const  { Expo } =require('expo-server-sdk')
 const UserLeagueModel = require("../models/UserLeague");
 const UserModel = require("../models/User");
 const LeagueModel = require("../models/League");
+const { and } = require('sequelize');
 
 exports.sendLeagueNotification = async (leagueId, message) => {
     const leaguePlayers = await UserLeagueModel.findAll({
@@ -29,6 +30,9 @@ exports.sendLeagueNotification = async (leagueId, message) => {
       title: "League Notification",
       body: message,
       data: { id: leagueId, league: league } ,
+      android: {
+        icon:"../utils/appLogo.png",
+      },
     };
  
     setTimeout(() => {
