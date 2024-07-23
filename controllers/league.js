@@ -233,7 +233,6 @@ exports.getLeaguePlayersByLeagueId = async (req, res) => {
 exports.updateLeagueDetails = async (req, res) => {
  
  const { leagueId, leagueName } = req.body;
- console.log(req.body)
   const { file } = req;
 
   try {
