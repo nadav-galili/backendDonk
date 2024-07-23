@@ -43,7 +43,8 @@ const uploadImageToS3 = async (file) => {
 };
 
 exports.signup = async function (req, res) {
-  const { password, nickName } = req.body;
+ 
+  const {  nickName } = req.body;
 
   try {
     const existingUser = await UserModel.findOne({ where: { nickName } });
@@ -52,7 +53,6 @@ exports.signup = async function (req, res) {
       return res.status(400).json({ error: "User already exists." });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
     let imageUrl = null;
 
     if (req.file) {
@@ -62,7 +62,6 @@ exports.signup = async function (req, res) {
     }
 
     const newUser = await UserModel.create({
-      password: hashedPassword,
       nickName,
       image: imageUrl ?? "uploads/anonymos.png",
     });
@@ -75,8 +74,6 @@ exports.signup = async function (req, res) {
     );
 
     newUser.dataValues.token = token;
-
-    delete newUser.dataValues.password;
 
     res.status(200).json({ message: "Signup successful", user: newUser });
   } catch (err) {
@@ -158,7 +155,6 @@ exports.me = async function (req, res) {
 
     delete user.dataValues.password;
     res.status(200).json({ message: "User found.", user });
-    // res.status(200).json({ message: "User found.", userId });
   } catch (err) {
     console.error("Error during me:", err);
     res.status(500).json({ message: "Internal server error." });
@@ -166,7 +162,7 @@ exports.me = async function (req, res) {
 };
 
 exports.login = async function (req, res) {
-  let { password, nickName } = req.body;
+  let {  nickName } = req.body;
  
   try {
     const existingUser = await UserModel.findOne({ where: { nickName } });
@@ -174,14 +170,7 @@ exports.login = async function (req, res) {
     if (!existingUser) {
       return res.status(404).json({ error: "User not found." });
     }
-    const isPasswordCorrect = await bcrypt.compare(
-      password,
-      existingUser.password
-    );
 
-    if (!isPasswordCorrect) {
-      return res.status(400).json({ error: "Invalid nick name or password" });
-    }
     //generate token
     const jwtKey = process.env.JWTKEY;
     const token = jwt.sign(
@@ -219,7 +208,6 @@ exports.personalStats = async function (req, res) {
       ],
       order: [["created_at", "DESC"]],
     });
-    console.log("🚀 ~ userGames:", userGames)
     if(userGames.length === 0){
       return res.status(200).json({
         message: "No games found.",

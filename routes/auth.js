@@ -14,7 +14,7 @@ router.post("/", async (req, res) => {
     return res.status(400).send("Invalid nickName or password.");
   const token = user.generateAuthToken();
   user.dataValues.token = token;
-  delete user.dataValues.password;
+  //delete user.dataValues.password;
   return res.status(200).send(user);
 });
 module.exports = router;

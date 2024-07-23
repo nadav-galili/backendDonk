@@ -38,76 +38,86 @@ const uploadImageToS3 = async (file) => {
 exports.upload = upload;
 
 exports.myLeagues = async (req, res) => {
-  const userId = req.user?.userId;
- 
-  const user = await UserModel.findAll({
-    where: { id: userId },
-    attributes: ["id", "nickName", "image"],
-    include: [
-      {
-        model: UserLeagueModel,
-        as: "userLeagues",
-        include: [
-          {
-            model: LeagueModel,
-            as: "league",
-          },
-        ],
-      },
-    ],
-  });
- 
+  const userId = req.params.userId;
+  if (!userId) {
+    return res.status(400).json({ error: "User not found" });
+  }
 
-  await Promise.all(
-    user.map(async (user) => {
-      await Promise.all(
-        user.dataValues.userLeagues.map(async (userLeague) => {
-          if(userLeague.league.dataValues.admin_id){
-          const admin = await UserModel.findOne({
-            attributes: ["id", "nickName", "image"],
-            where: { id: userLeague.league.dataValues.admin_id },
-          });
-          userLeague.league.dataValues.leagueAdmin = admin;
-        }
-        })
-      
-      );
-    })
-  );
-
-  let leaguePlayers = [];
-  //execute only if user has a league
-  if (user[0]?.dataValues.userLeagues[0]?.league?.dataValues?.id) {
-    await Promise.all(
-      (leaguePlayers = await UserLeagueModel.findAll({
-        where: {
-          league_id: user[0]?.dataValues.userLeagues[0]?.league?.dataValues?.id,
+  try {
+    const user = await UserModel.findAll({
+      where: { id: userId },
+      attributes: ["id", "nickName", "image"],
+      include: [
+        {
+          model: UserLeagueModel,
+          as: "userLeagues",
+          include: [
+            {
+              model: LeagueModel,
+              as: "league",
+            },
+          ],
         },
-        include: [
-          {
-            model: UserModel,
-            attributes: ["id", "nickName", "image"],
-            as: "User",
-          },
-        ],
-      }))
-    );
-  }
-
-  if (user[0].userLeagues.length === 0) {
-    return res.status(200).json({
-      message: "No leagues found",
-      leagues: [],
-      user,
+      ],
     });
+   
+  
+    await Promise.all(
+      user.map(async (user) => {
+        await Promise.all(
+          user.dataValues.userLeagues.map(async (userLeague) => {
+            if(userLeague.league.dataValues.admin_id){
+            const admin = await UserModel.findOne({
+              attributes: ["id", "nickName", "image"],
+              where: { id: userLeague.league.dataValues.admin_id },
+            });
+            userLeague.league.dataValues.leagueAdmin = admin;
+          }
+          })
+        
+        );
+      })
+    );
+  
+    let leaguePlayers = [];
+    //execute only if user has a league
+    if (user[0]?.dataValues.userLeagues[0]?.league?.dataValues?.id) {
+      await Promise.all(
+        (leaguePlayers = await UserLeagueModel.findAll({
+          where: {
+            league_id: user[0]?.dataValues.userLeagues[0]?.league?.dataValues?.id,
+          },
+          include: [
+            {
+              model: UserModel,
+              attributes: ["id", "nickName", "image"],
+              as: "User",
+            },
+          ],
+        }))
+      );
+    }
+  
+    if (user[0].userLeagues.length === 0) {
+      return res.status(200).json({
+        message: "No leagues found",
+        leagues: [],
+        user,
+      });
+    }
+  
+    return res.status(200).json({
+      message: "Leagues found",
+      leagues: user[0].userLeagues,
+      user,
+      leaguePlayers,
+    });
+  } catch (error) {
+    console.log("🚀 ~ exports.myLeagues= ~ error:", error)
+    
   }
-
-  return res.status(200).json({
-    message: "Leagues found",
-    leagues: user[0].userLeagues,
-    user,
-    leaguePlayers,
-  });
+ 
+  
 };
 
 exports.createLeague = async (req, res) => {
@@ -132,6 +142,18 @@ exports.createLeague = async (req, res) => {
       league_id: newLeague.id,
       is_admin: true,
     });
+
+    //add anonymosplayer to the league
+    const anonymosPlayer = await UserModel.findOne({
+      where: { nickName: "Anonymous Player" },
+    });
+
+    await UserLeagueModel.create({
+      user_id: anonymosPlayer.id,
+      league_id: newLeague.id,
+      is_admin: false,
+    });
+
     return res.status(200).json({
       message: "League created",
       league: newLeague,
@@ -205,3 +227,45 @@ exports.getLeaguePlayersByLeagueId = async (req, res) => {
 
   return res.status(200).json({ leaguePlayers });
 };
+
+
+
+exports.updateLeagueDetails = async (req, res) => {
+ 
+ const { leagueId, leagueName } = req.body;
+ console.log(req.body)
+  const { file } = req;
+
+  try {
+    const league = await LeagueModel.findByPk(leagueId);
+   if(!league){
+     return res.status(404).json({ message: "League not found" });
+   }
+
+   let imageUrl = league.league_image
+    if (file) {
+      imageUrl = await uploadImageToS3(file);
+      imageUrl = imageUrl.split("leagueAvatars/");
+      imageUrl = "leagueAvatars/" + imageUrl[1];
+      if(league.league_image !== "leagueAvatars/league.jpg"){
+        const params = {
+          Bucket: process.env.S3_BUCKET_NAME || config.S3_BUCKET_NAME,
+          Key: league.league_image,
+        };
+        await s3.deleteObject(params).promise();
+      }
+
+    }
+    
+    await league.update({
+      league_name: leagueName,
+      league_image: imageUrl,
+    });
+
+    return res.status(200).json({ message: "League updated", league });
+  } catch (error) {
+    console.error("Error during updatePersonaldetails:", err);
+    res.status(500).json({ message: "Internal server error." });
+  }
+  
+}
