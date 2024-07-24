@@ -21,13 +21,6 @@ User.init(
       allowNull: false,
       primaryKey: true,
     },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        len: [4],
-      },
-    },
     nickName: {
       type: DataTypes.STRING,
       allowNull: true,

@@ -13,6 +13,9 @@ const dayJs = require("dayjs");
 exports.newGame = async (req, res) => {
   
   const { selectedPlayers, leagueId, gameAdminId } = req.body;
+  console.log("🚀 ~ exports.newGame= ~ gameAdminId:", gameAdminId)
+  console.log("🚀 ~ exports.newGame= ~ leagueId:", leagueId)
+  console.log("🚀 ~ exports.newGame= ~ selectedPlayers:", selectedPlayers)
   
 
   if (!selectedPlayers || !leagueId || !gameAdminId)
@@ -121,10 +124,22 @@ exports.addBuyInToPlayer = async (req, res) => {
           },
         }
       ),
+
     ]);
+    ///get total buy ins for the game from gameDetails
+    const totalBuyIns = await GameDetailsModel.findAll({
+      where: {
+        game_id: gameId,
+      },
+      attributes: [
+        [Sequelize.fn("sum", Sequelize.col("buy_in_amount")), "totalBuyIns"],
+      ],
+      raw: true,
+    });
 
     return res.status(200).json({
       message: `Buy in added to player ${playerId} in game ${gameId}`,
+      totalBuyIns: totalBuyIns[0].totalBuyIns,
     });
   } catch (error) {
     console.error("Error adding buy-in:", error);
