@@ -18,5 +18,5 @@ router.put(
   upload.single("image"),
   userController.updatePersonaldetails
 );
-router.put("/updateExpoPushToken/:userId",  userController.expoPushTokens);
+router.put("/updateExpoPushToken/:userId", auth, userController.expoPushTokens);
 module.exports = router;

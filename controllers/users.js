@@ -163,9 +163,11 @@ exports.me = async function (req, res) {
 
 exports.login = async function (req, res) {
   let {  nickName } = req.body;
+  
  
   try {
     const existingUser = await UserModel.findOne({ where: { nickName } });
+    console.log("🚀 ~ existingUser:", existingUser)
 
     if (!existingUser) {
       return res.status(404).json({ error: "User not found." });
