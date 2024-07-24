@@ -11,13 +11,8 @@ const {sendLeagueNotification} = require('../utils/pushNotification')
 const dayJs = require("dayjs");
 
 exports.newGame = async (req, res) => {
-  
   const { selectedPlayers, leagueId, gameAdminId } = req.body;
-  console.log("🚀 ~ exports.newGame= ~ gameAdminId:", gameAdminId)
-  console.log("🚀 ~ exports.newGame= ~ leagueId:", leagueId)
-  console.log("🚀 ~ exports.newGame= ~ selectedPlayers:", selectedPlayers)
   
-
   if (!selectedPlayers || !leagueId || !gameAdminId)
     return res.status(400).json({ message: "missing data", data: req.body });
 

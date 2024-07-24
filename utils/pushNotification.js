@@ -31,8 +31,10 @@ exports.sendLeagueNotification = async (leagueId, message) => {
       body: message,
       data: { id: leagueId, league: league } ,
       android: {
-        icon:"../utils/appLogo.png",
+        icon:"https://backend-donk-images.s3.il-central-1.amazonaws.com/uploads/anonymos.png",
+        color: "#FF0000" // Custom color for Android notifications
       },
+  
     };
  
     setTimeout(() => {
@@ -57,7 +59,10 @@ const sendPushNotification = async (messageObject) => {
           to: pushToken,
           sound: 'default',
           body:messageObject.body,
+          title: messageObject.title,
           data: messageObject.data,
+          android: messageObject.android,
+       
         })
       }
 // The Expo push notification service accepts batches of notifications so
