@@ -8,13 +8,15 @@ const UserLeaguemodel = require("../models/UserLeague");
 const { Sequelize } = require("sequelize");
 const { s3 } = require("../db"); // Ensure s3 is correctly imported
 require("dotenv").config();
-
+const { OAuth2Client } = require('google-auth-library');
 const {
   calculateStreaks,
   calculateWinnLossRatio,
 } = require("../utils/statsUtils");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+
+
 
 // Define multer storage utilsuration
 const storage = multer.memoryStorage();
@@ -41,6 +43,75 @@ const uploadImageToS3 = async (file) => {
     throw new Error("Error uploading file to S3");
   }
 };
+
+const findUserByGoogleId=(userId)=>{
+  return UserModel.findOne({ where: { google_id: userId } });
+}
+
+const generateSessionToken = (user) => {
+  const sessionToken = jwt.sign(
+    { userId: user.id, nickName: user.nickName },
+    process.env.JWTKEY
+  );
+  return sessionToken;
+}
+
+exports.googleSignin = async function (req, res) {
+  ///verify id 
+  const ANDROID_CLIENT_ID = process.env.GOOGLE_ANDROID_CLIENT_ID;
+  const WEB_CLIENT_ID = process.env.GOOGLE_WEB_CLIENT_ID;
+
+  const client = new OAuth2Client();
+  const { idToken } = req.body;
+ 
+  try {
+    // Verify the ID token
+    const ticket = await client.verifyIdToken({
+      idToken: idToken,
+      audience: [ANDROID_CLIENT_ID, WEB_CLIENT_ID],
+    });
+
+    // Get the user's Google account info
+    const payload = ticket.getPayload();
+
+    const userId = payload['sub'];
+    const email = payload['email'];
+    const name = payload['name'];
+    const picture = payload['picture'];
+    const givenName = payload['given_name'];
+    const familyName = payload['family_name'];
+
+    // Check if the user exists in your database
+     let user = await findUserByGoogleId(userId);
+     if(user){
+      //generate token
+      const token = generateSessionToken(user);
+      user.dataValues.token = token;
+     return res.status(200).json({ message: "Signin successful", user });
+    
+     }
+
+    if (!user) {
+      const newUser = await UserModel.create({
+        google_id: userId,
+        email,
+        nickName: name,
+        given_name: givenName,
+        family_name: familyName,
+        image: picture,
+      });
+      const token = generateSessionToken(newUser);
+      newUser.dataValues.token = token;
+      return res.status(200).json({ message: "Signup successful", user: newUser });
+   
+    }
+    res.status(200).json({ message: "Signup successful", user: newUser });
+  } catch (error) {
+    console.error('Error verifying Google token:', error);
+    res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+
+}
 
 exports.signup = async function (req, res) {
  
@@ -142,7 +213,63 @@ exports.updatePersonaldetails = async function (req, res) {
 
 // Export the upload instance to be used in the router file
 exports.upload = upload;
+exports.checkNotification = async function (req, res) {
+  const userId = req.params.userId;
 
+  try {
+    const user = await UserModel.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    if(user.expoPushToken){
+      return res.status(200).json({ message: "User has a token", user });
+    }else{
+
+      return res.status(200).json({ message: "User has no token", user });
+    }
+
+    
+  } catch (error) {
+    console.error("Error during checkNotification:", error);
+    res.status(500).json({ message: "Internal server error." });
+    
+  }
+}
+
+exports.updateNotificationSettings = async (req, res) => {
+  const {  isEnabled } = req.body;
+  const userId = req.params.userId;
+  try {
+    const user = await UserModel.findByPk(userId);
+   
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    if(user.expoPushToken && isEnabled){
+    return res.status(200).json({ message: "User doesent need to update" });
+    }
+
+    if(user.expoPushToken && !isEnabled){
+      await user.update({
+        expoPushToken: null,
+      });
+      return res.status(200).json({ message: "Notification was disabled." });
+    }
+
+    if(!user.expoPushToken && isEnabled){
+      return res.status(200).json({ message: "User doesent have a token" });
+    }
+
+    if(!user.expoPushToken && !isEnabled){
+      return res.status(200).json({ message: "User doesent need to update" });
+    }
+  
+  } catch (err) {
+    console.error("Error during updateNotificationSettings:", err);
+    res.status(500).json({ message: "Internal server error." });
+  }
+}
 exports.me = async function (req, res) {
   try {
     const userId = req?.user?.userId;
@@ -162,12 +289,9 @@ exports.me = async function (req, res) {
 };
 
 exports.login = async function (req, res) {
-  let {  nickName } = req.body;
-  
- 
+  let {  google_id } = req.body;
   try {
-    const existingUser = await UserModel.findOne({ where: { nickName } });
-    console.log("🚀 ~ existingUser:", existingUser)
+    const existingUser =  await findUserByGoogleId(google_id);
 
     if (!existingUser) {
       return res.status(404).json({ error: "User not found." });
@@ -457,23 +581,17 @@ exports.personalStats = async function (req, res) {
 };
 
 
-
 exports.expoPushTokens = async function (req, res) {
- 
   const { expoPushToken } = req.body;
   const { userId } = req.params;
- 
- 
   try {
     const user = await UserModel.findByPk(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }
-  await user.update({
+    await user.update({
     expoPushToken: expoPushToken,
   });
-
-
     res.status(200).json({ message: "Expo push token updated." });
   } catch (err) {
     console.error("Error during updatePersonaldetails:", err);

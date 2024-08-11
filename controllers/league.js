@@ -145,7 +145,7 @@ exports.createLeague = async (req, res) => {
 
     //add anonymosplayer to the league
     const anonymosPlayer = await UserModel.findOne({
-      where: { nickName: "Anonymous Player" },
+      where: { nickName: "Anonymous" },
     });
 
     await UserLeagueModel.create({
