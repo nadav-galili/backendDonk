@@ -31,8 +31,7 @@ exports.sendLeagueNotification = async (leagueId, message) => {
       body: message,
       data: { id: leagueId, league: league } ,
       android: {
-        icon:"https://backend-donk-images.s3.il-central-1.amazonaws.com/uploads/anonymos.png",
-        color: "#FF0000" // Custom color for Android notifications
+       imageUrl: 'https://backend-donk-images.s3.il-central-1.amazonaws.com/uploads/anonymous.png',
       },
   
     };
