@@ -60,32 +60,31 @@ exports.myLeagues = async (req, res) => {
         },
       ],
     });
-   
-  
+
     await Promise.all(
       user.map(async (user) => {
         await Promise.all(
           user.dataValues.userLeagues.map(async (userLeague) => {
-            if(userLeague.league.dataValues.admin_id){
-            const admin = await UserModel.findOne({
-              attributes: ["id", "nickName", "image"],
-              where: { id: userLeague.league.dataValues.admin_id },
-            });
-            userLeague.league.dataValues.leagueAdmin = admin;
-          }
+            if (userLeague.league.dataValues.admin_id) {
+              const admin = await UserModel.findOne({
+                attributes: ["id", "nickName", "image"],
+                where: { id: userLeague.league.dataValues.admin_id },
+              });
+              userLeague.league.dataValues.leagueAdmin = admin;
+            }
           })
-        
         );
       })
     );
-  
+
     let leaguePlayers = [];
     //execute only if user has a league
     if (user[0]?.dataValues.userLeagues[0]?.league?.dataValues?.id) {
       await Promise.all(
         (leaguePlayers = await UserLeagueModel.findAll({
           where: {
-            league_id: user[0]?.dataValues.userLeagues[0]?.league?.dataValues?.id,
+            league_id:
+              user[0]?.dataValues.userLeagues[0]?.league?.dataValues?.id,
           },
           include: [
             {
@@ -97,7 +96,7 @@ exports.myLeagues = async (req, res) => {
         }))
       );
     }
-  
+
     if (user[0].userLeagues.length === 0) {
       return res.status(200).json({
         message: "No leagues found",
@@ -105,7 +104,7 @@ exports.myLeagues = async (req, res) => {
         user,
       });
     }
-  
+
     return res.status(200).json({
       message: "Leagues found",
       leagues: user[0].userLeagues,
@@ -113,11 +112,8 @@ exports.myLeagues = async (req, res) => {
       leaguePlayers,
     });
   } catch (error) {
-    console.log("🚀 ~ exports.myLeagues= ~ error:", error)
-    
+    console.log("🚀 ~ exports.myLeagues= ~ error:", error);
   }
- 
-  
 };
 
 exports.createLeague = async (req, res) => {
@@ -228,43 +224,59 @@ exports.getLeaguePlayersByLeagueId = async (req, res) => {
   return res.status(200).json({ leaguePlayers });
 };
 
-
-
 exports.updateLeagueDetails = async (req, res) => {
- 
- const { leagueId, leagueName } = req.body;
+  const { leagueId, leagueName, leaguePlayers } = req.body;
+  const parsedLeaguePlayers = JSON.parse(leaguePlayers);
   const { file } = req;
-
   try {
     const league = await LeagueModel.findByPk(leagueId);
-   if(!league){
-     return res.status(404).json({ message: "League not found" });
-   }
+    if (!league) {
+      return res.status(404).json({ message: "League not found" });
+    }
 
-   let imageUrl = league.league_image
+    let imageUrl = league.league_image;
     if (file) {
       imageUrl = await uploadImageToS3(file);
       imageUrl = imageUrl.split("leagueAvatars/");
       imageUrl = "leagueAvatars/" + imageUrl[1];
-      if(league.league_image !== "leagueAvatars/league.jpg"){
+      if (league.league_image !== "leagueAvatars/league.jpg") {
         const params = {
           Bucket: process.env.S3_BUCKET_NAME || config.S3_BUCKET_NAME,
           Key: league.league_image,
         };
         await s3.deleteObject(params).promise();
       }
-
     }
-    
+
     await league.update({
       league_name: leagueName,
       league_image: imageUrl,
     });
 
-    return res.status(200).json({ message: "League updated", league });
+    const userLeagues = await UserLeagueModel.findAll({
+      where: { league_id: leagueId },
+    });
+
+    ///check if all the players are in the league
+
+    userLeagues.map(async (userLeague) => {
+      if (
+        !parsedLeaguePlayers.find(
+          (player) => player.id === userLeague.dataValues.id
+        )
+      ) {
+        console.log("player not found", userLeague);
+        if (!userLeague.dataValues.is_admin) {
+          await userLeague.destroy();
+        }
+      }
+    });
+
+    return res
+      .status(200)
+      .json({ message: "League updated", league, status: 1 });
   } catch (error) {
     console.error("Error during updatePersonaldetails:", err);
     res.status(500).json({ message: "Internal server error." });
   }
-  
-}
+};

@@ -8,15 +8,13 @@ const UserLeaguemodel = require("../models/UserLeague");
 const { Sequelize } = require("sequelize");
 const { s3 } = require("../db"); // Ensure s3 is correctly imported
 require("dotenv").config();
-const { OAuth2Client } = require('google-auth-library');
+const { OAuth2Client } = require("google-auth-library");
 const {
   calculateStreaks,
   calculateWinnLossRatio,
 } = require("../utils/statsUtils");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
-
-
 
 // Define multer storage utilsuration
 const storage = multer.memoryStorage();
@@ -44,9 +42,9 @@ const uploadImageToS3 = async (file) => {
   }
 };
 
-const findUserByGoogleId=(userId)=>{
+const findUserByGoogleId = (userId) => {
   return UserModel.findOne({ where: { google_id: userId } });
-}
+};
 
 const generateSessionToken = (user) => {
   const sessionToken = jwt.sign(
@@ -54,18 +52,19 @@ const generateSessionToken = (user) => {
     process.env.JWTKEY
   );
   return sessionToken;
-}
+};
 
 exports.googleSignin = async function (req, res) {
-  ///verify id 
+  ///verify id
   const ANDROID_CLIENT_ID = process.env.GOOGLE_ANDROID_CLIENT_ID;
   const WEB_CLIENT_ID = process.env.GOOGLE_WEB_CLIENT_ID;
 
   const client = new OAuth2Client();
   const { idToken } = req.body;
- 
+
   try {
     // Verify the ID token
+
     const ticket = await client.verifyIdToken({
       idToken: idToken,
       audience: [ANDROID_CLIENT_ID, WEB_CLIENT_ID],
@@ -74,22 +73,21 @@ exports.googleSignin = async function (req, res) {
     // Get the user's Google account info
     const payload = ticket.getPayload();
 
-    const userId = payload['sub'];
-    const email = payload['email'];
-    const name = payload['name'];
-    const picture = payload['picture'];
-    const givenName = payload['given_name'];
-    const familyName = payload['family_name'];
+    const userId = payload["sub"];
+    const email = payload["email"];
+    const name = payload["name"];
+    const picture = payload["picture"];
+    const givenName = payload["given_name"];
+    const familyName = payload["family_name"];
 
     // Check if the user exists in your database
-     let user = await findUserByGoogleId(userId);
-     if(user){
+    let user = await findUserByGoogleId(userId);
+    if (user) {
       //generate token
       const token = generateSessionToken(user);
       user.dataValues.token = token;
-     return res.status(200).json({ message: "Signin successful", user });
-    
-     }
+      return res.status(200).json({ message: "Signin successful", user });
+    }
 
     if (!user) {
       const newUser = await UserModel.create({
@@ -102,20 +100,19 @@ exports.googleSignin = async function (req, res) {
       });
       const token = generateSessionToken(newUser);
       newUser.dataValues.token = token;
-      return res.status(200).json({ message: "Signup successful", user: newUser });
-   
+      return res
+        .status(200)
+        .json({ message: "Signup successful", user: newUser });
     }
     res.status(200).json({ message: "Signup successful", user: newUser });
   } catch (error) {
-    console.error('Error verifying Google token:', error);
-    res.status(401).json({ success: false, message: 'Invalid token' });
+    console.error("Error verifying Google token:", error);
+    res.status(401).json({ success: false, message: "Invalid token" });
   }
-
-}
+};
 
 exports.signup = async function (req, res) {
- 
-  const {  nickName } = req.body;
+  const { nickName } = req.body;
 
   try {
     const existingUser = await UserModel.findOne({ where: { nickName } });
@@ -134,7 +131,7 @@ exports.signup = async function (req, res) {
 
     const newUser = await UserModel.create({
       nickName,
-      image: imageUrl ?? "uploads/anonymos.png",
+      image: imageUrl ?? "uploads/uanonymos.png",
     });
 
     // Generate token
@@ -185,7 +182,7 @@ exports.updatePersonaldetails = async function (req, res) {
       imageUrl = imageUrl.split("uploads/");
       imageUrl = "uploads/" + imageUrl[1];
       // If there was an old image and it's not the default, delete it from S3
-      if (user.image && user.image !== "uploads/anonymos.png") {
+      if (user.image && user.image !== "uploads/anonymous.png") {
         await deleteImageFromS3(user.image);
       }
     }
@@ -201,8 +198,6 @@ exports.updatePersonaldetails = async function (req, res) {
       { userId: user.id, nickName: user.nickName, image: user.image },
       jwtKey
     );
-
-  
 
     res.status(200).json({ message: "User updated.", token: token, user });
   } catch (err) {
@@ -221,55 +216,50 @@ exports.checkNotification = async function (req, res) {
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }
-    if(user.expoPushToken){
+    if (user.expoPushToken) {
       return res.status(200).json({ message: "User has a token", user });
-    }else{
-
+    } else {
       return res.status(200).json({ message: "User has no token", user });
     }
-
-    
   } catch (error) {
     console.error("Error during checkNotification:", error);
     res.status(500).json({ message: "Internal server error." });
-    
   }
-}
+};
 
 exports.updateNotificationSettings = async (req, res) => {
-  const {  isEnabled } = req.body;
+  const { isEnabled } = req.body;
   const userId = req.params.userId;
   try {
     const user = await UserModel.findByPk(userId);
-   
+
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }
 
-    if(user.expoPushToken && isEnabled){
-    return res.status(200).json({ message: "User doesent need to update" });
+    if (user.expoPushToken && isEnabled) {
+      return res.status(200).json({ message: "User doesent need to update" });
     }
 
-    if(user.expoPushToken && !isEnabled){
+    if (user.expoPushToken && !isEnabled) {
       await user.update({
         expoPushToken: null,
       });
       return res.status(200).json({ message: "Notification was disabled." });
     }
 
-    if(!user.expoPushToken && isEnabled){
+    if (!user.expoPushToken && isEnabled) {
       return res.status(200).json({ message: "User doesent have a token" });
     }
 
-    if(!user.expoPushToken && !isEnabled){
+    if (!user.expoPushToken && !isEnabled) {
       return res.status(200).json({ message: "User doesent need to update" });
     }
-  
   } catch (err) {
     console.error("Error during updateNotificationSettings:", err);
     res.status(500).json({ message: "Internal server error." });
   }
-}
+};
 exports.me = async function (req, res) {
   try {
     const userId = req?.user?.userId;
@@ -289,9 +279,11 @@ exports.me = async function (req, res) {
 };
 
 exports.login = async function (req, res) {
-  let {  google_id } = req.body;
+  let { google_id } = req.body;
+  console.log("🚀 ~ google_id:", google_id);
   try {
-    const existingUser =  await findUserByGoogleId(google_id);
+    const existingUser = await findUserByGoogleId(google_id);
+    console.log("🚀 ~ existingUser:", existingUser);
 
     if (!existingUser) {
       return res.status(404).json({ error: "User not found." });
@@ -334,7 +326,7 @@ exports.personalStats = async function (req, res) {
       ],
       order: [["created_at", "DESC"]],
     });
-    if(userGames.length === 0){
+    if (userGames.length === 0) {
       return res.status(200).json({
         message: "No games found.",
         games: [],
@@ -580,7 +572,6 @@ exports.personalStats = async function (req, res) {
   }
 };
 
-
 exports.expoPushTokens = async function (req, res) {
   const { expoPushToken } = req.body;
   const { userId } = req.params;
@@ -590,12 +581,11 @@ exports.expoPushTokens = async function (req, res) {
       return res.status(404).json({ message: "User not found." });
     }
     await user.update({
-    expoPushToken: expoPushToken,
-  });
+      expoPushToken: expoPushToken,
+    });
     res.status(200).json({ message: "Expo push token updated." });
   } catch (err) {
     console.error("Error during updatePersonaldetails:", err);
     res.status(500).json({ message: "Internal server error." });
   }
-  
-}
+};

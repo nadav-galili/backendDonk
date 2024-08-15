@@ -21,20 +21,10 @@ exports.profitPerHour = async (req, res) => {
         "user_id",
         [Sequelize.fn("SUM", Sequelize.col("profit")), "totalProfit"],
         [
-          Sequelize.fn(
-            "SUM",
-            Sequelize.literal(
-              "TIMESTAMPDIFF(MINUTE, UserGames.created_at, UserGames.cash_out_time)/60"
-            )
+          Sequelize.literal(
+            "SUM(TIMESTAMPDIFF(MINUTE, UserGames.created_at, UserGames.cash_out_time))/60"
           ),
           "totalHours",
-        ],
-
-        [
-          Sequelize.literal(
-            "SUM(buy_ins_amount) / SUM(TIMESTAMPDIFF(MINUTE, UserGames.created_at, UserGames.cash_out_time)/60)"
-          ),
-          "buyInPerHour",
         ],
         [Sequelize.literal("SUM(buy_ins_amount)"), "totalBuyIns"],
       ],
@@ -48,13 +38,14 @@ exports.profitPerHour = async (req, res) => {
       group: ["user_id"],
     });
 
+    // Calculate buyInPerHour based on totalBuyIns and totalHours
     profitPerHour.forEach((player) => {
-      if (player.dataValues.buyInPerHour === 0) {
-        player.dataValues.buyInPerHour =
-          player.dataValues.buyInPerHour.toFixed(2);
-      }
+      const totalHours = parseFloat(player.dataValues.totalHours);
+      const totalBuyIns = parseFloat(player.dataValues.totalBuyIns);
+
+      player.dataValues.buyInPerHour =
+        totalHours !== 0 ? (totalBuyIns / totalHours).toFixed(2) : "N/A";
     });
-    // console.log("🚀 ~ exports.profitPerHour= ~ profitPerHour:", profitPerHour);
 
     if (!profitPerHour.length) {
       res.status(404).json("No data found");
@@ -67,11 +58,12 @@ exports.profitPerHour = async (req, res) => {
       const image = player["User"].image;
       let title =
         player.dataValues.totalHours !== 0
-          ? player.dataValues.totalProfit / player.dataValues?.totalHours
+          ? (
+              player.dataValues.totalProfit / player.dataValues.totalHours
+            ).toFixed(2)
           : "N/A";
       const subTitle = Number(player.dataValues.totalHours).toFixed(2);
-      const subTitle2 = Number(player.dataValues.buyInPerHour).toFixed(2);
-      title = Number(title).toFixed(2);
+      const subTitle2 = player.dataValues.buyInPerHour;
       return {
         id,
         nickName,
