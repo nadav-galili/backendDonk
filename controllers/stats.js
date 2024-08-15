@@ -451,7 +451,7 @@ exports.getMainCardsStats = async (req, res) => {
         id: 1,
         title: "Total Profit",
         apiRoute: "totalProfit",
-        cardTitle: "Profit",
+        cardTitle: "Total Profit",
         subTitle: "Total Games",
         subTitle2: "Average Profit",
         values: formattedStats,
@@ -469,8 +469,7 @@ exports.getMainCardsStats = async (req, res) => {
         id: 3,
         title: "Profit Per Hour",
         apiRoute: "profitPerHour",
-        cardTitle: "Profit",
-
+        cardTitle: "Profit per hour",
         subTitle: "Hours Played",
         subTitle2: "Buy In Per Hour",
         values: formattedHighestProfitPerHour,
@@ -480,7 +479,6 @@ exports.getMainCardsStats = async (req, res) => {
         title: "Top 10 Comebacks",
         apiRoute: "top10Comebacks",
         cardTitle: "Profit",
-
         subTitle: "Buy In",
         subTitle2: "Date",
         values: formattedBiggestComeback,
