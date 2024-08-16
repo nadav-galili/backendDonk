@@ -350,7 +350,6 @@ exports.getAllGames = async (req, res) => {
   let createdAt = startDate ?? dayJs().startOf("year").toDate();
   let endAt = endDate ?? dayJs().toDate();
 
-  // Convert continuationToken to a number and provide a default value if it's not a valid number
   const offset = Number(continuationToken) || 0;
 
   if (isNaN(offset)) {
@@ -359,7 +358,7 @@ exports.getAllGames = async (req, res) => {
   }
 
   try {
-    const limit = 3; // Number of games per page
+    const limit = 3;
 
     const games = await GameModel.findAll({
       where: {
@@ -395,27 +394,21 @@ exports.getAllGames = async (req, res) => {
             },
           ],
         },
+        {
+          model: UserModel,
+          as: "game_manager", // Ensuring the correct alias
+          attributes: ["id", "nickName", "image"],
+        },
       ],
       order: [
-        ["id", "DESC"], // This orders the Games by id in descending order
-        [{ model: UserGameModel, as: "user_games" }, "game_rank", "ASC"], // This orders the nested UserGames by game_rank in ascending order
+        ["id", "DESC"],
+        [{ model: UserGameModel, as: "user_games" }, "game_rank", "ASC"],
       ],
       limit,
       offset,
     });
 
     const nextContinuationToken = offset + limit;
-    if (games.length > 0) {
-      const game_manager = await UserModel.findOne({
-        where: {
-          id: games[0]?.game_manager_id,
-        },
-        attributes: ["id", "nickName", "image"],
-      });
-      games.forEach((game) => {
-        game.dataValues.game_manager = game_manager;
-      });
-    }
 
     res.status(200).json({
       games,
@@ -428,6 +421,7 @@ exports.getAllGames = async (req, res) => {
       .json({ message: "Internal server error", error: error });
   }
 };
+
 exports.checkIfOpenGameExist = async (req, res) => {
   const { leagueId } = req.query;
 
@@ -683,76 +677,103 @@ exports.deleteGame = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 exports.updatedGameDetails = async (req, res) => {
   try {
-    const { gameId, gameDetails } = req.body;
-    if (!gameId || !gameDetails)
+    const { gameId, gameDetails, editorId } = req.body;
+    if (!gameId || !gameDetails || !editorId)
       return res.status(400).json({ message: "missing data", data: req.body });
 
-    const gameDetailsData = await GameDetailsModel.findAll({
-      where: {
-        game_id: gameId,
-      },
-      attributes: ["user_id", "buy_in_amount", "league_id"],
-      group: ["user_id", "buy_in_amount", "league_id"],
-    });
+    await sequelize.transaction(async (t) => {
+      const gameDetailsData = await GameDetailsModel.findAll({
+        where: {
+          game_id: gameId,
+        },
+        attributes: ["user_id", "buy_in_amount", "league_id"],
+        group: ["user_id", "buy_in_amount", "league_id"],
+        transaction: t,
+      });
 
-    const league = await LeagueModel.findOne({
-      where: {
-        id: gameDetailsData[0].league_id,
-      },
-    });
+      const league = await LeagueModel.findOne({
+        where: {
+          id: gameDetailsData[0].league_id,
+        },
+        transaction: t,
+      });
 
-    await Promise.all(
-      gameDetailsData.map(async (gameDetail) => {
-        const updatedGameDetail = gameDetails.find(
-          (detail) =>
-            detail.user_id === gameDetail.user_id &&
-            detail.buy_ins_amount != gameDetail.buy_in_amount
-        );
+      await Promise.all(
+        gameDetailsData.map(async (gameDetail) => {
+          const updatedGameDetail = gameDetails.find(
+            (detail) =>
+              detail.user_id === gameDetail.user_id &&
+              detail.buy_ins_amount != gameDetail.buy_in_amount
+          );
 
-        if (updatedGameDetail) {
-          await GameDetailsModel.destroy({
-            where: {
-              game_id: gameId,
-              user_id: gameDetail.user_id,
-            },
-          });
-          await GameDetailsModel.create({
-            buy_in_amount: parseInt(updatedGameDetail.buy_ins_amount),
-            game_id: gameId,
-            user_id: gameDetail.user_id,
-            league_id: league.id,
-          });
-        }
-      })
-    );
-
-    await Promise.all(
-      gameDetails.map(async (gameDetail) => {
-        await UserGames.update(
-          {
-            buy_ins_amount: gameDetail.buy_ins_amount,
-            buy_ins_number: parseInt(gameDetail.buy_ins_amount) / 50,
-            profit: gameDetail.profit,
-          },
-          {
-            where: {
-              game_id: gameId,
-              user_id: gameDetail.user_id,
-            },
+          if (updatedGameDetail) {
+            await GameDetailsModel.destroy({
+              where: {
+                game_id: gameId,
+                user_id: gameDetail.user_id,
+              },
+              transaction: t,
+            });
+            await GameDetailsModel.create(
+              {
+                buy_in_amount: parseInt(updatedGameDetail.buy_ins_amount),
+                game_id: gameId,
+                user_id: gameDetail.user_id,
+                league_id: league.id,
+              },
+              { transaction: t }
+            );
           }
-        );
-      })
-    );
-    const message = ` Game details were updated in the league ${league.league_name}`;
-    await sendLeagueNotification(league.id, message);
-    return res.status(200).json({
-      message: `Game details updated successfully`,
-      gameDetails,
-      status: 1,
-      league,
+        })
+      );
+
+      await Promise.all(
+        gameDetails.map(async (gameDetail) => {
+          await UserGames.update(
+            {
+              buy_ins_amount: gameDetail.buy_ins_amount,
+              buy_ins_number: parseInt(gameDetail.buy_ins_amount) / 50,
+              profit: gameDetail.profit,
+            },
+            {
+              where: {
+                game_id: gameId,
+                user_id: gameDetail.user_id,
+              },
+              transaction: t,
+            }
+          );
+        })
+      );
+
+      await GameModel.update(
+        { was_edited: 1, edited_by_user_id: editorId },
+        {
+          where: {
+            id: gameId,
+          },
+          transaction: t,
+        }
+      );
+
+      const editor = await UserModel.findOne({
+        where: {
+          id: editorId,
+        },
+        attributes: ["id", "nickName", "image"],
+        transaction: t,
+      });
+
+      const message = ` Game details were updated in  ${league.league_name} by ${editor.nickName}`;
+      await sendLeagueNotification(league.id, message);
+      return res.status(200).json({
+        message: `Game details updated successfully`,
+        gameDetails,
+        status: 1,
+        league,
+      });
     });
   } catch (error) {
     console.error("Error updating game details:", error);

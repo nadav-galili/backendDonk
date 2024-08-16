@@ -27,6 +27,19 @@ const Games = sequelize.define(
         key: "id",
       },
     },
+    was_edited: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    edited_by_user_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "users",
+        key: "id",
+      },
+    },
   },
   {
     sequelize,
