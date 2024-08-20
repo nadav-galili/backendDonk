@@ -13,6 +13,10 @@ const UserGames = require("../models/UserGame");
 
 exports.newGame = async (req, res) => {
   const { selectedPlayers, leagueId, gameAdminId } = req.body;
+  console.log("🚀 ~ exports.newGame= ~ gameAdminId:", gameAdminId);
+  console.log("🚀 ~ exports.newGame= ~ leagueId:", leagueId);
+  console.log("🚀 ~ exports.newGame= ~ selectedPlayers:", selectedPlayers);
+  console.log("🚀 ~ exports.newGame= ~ req.body:", req.body);
 
   if (!selectedPlayers || !leagueId || !gameAdminId)
     return res.status(400).json({ message: "missing data", data: req.body });
