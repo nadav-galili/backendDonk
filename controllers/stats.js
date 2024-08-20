@@ -112,7 +112,7 @@ exports.getLeagueStats = async (req, res) => {
               game_id, 
               SUM(buy_in_amount) AS total_buy_in
             FROM 
-              gameDetails
+              gamedetails
             WHERE 
               league_id = ${leagueId}
             GROUP BY 
