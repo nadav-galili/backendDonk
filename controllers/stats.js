@@ -89,9 +89,40 @@ exports.getLeagueStats = async (req, res) => {
       where: { league_id: leagueId },
     });
 
+    // Subquery to calculate the total buy-ins per game for the specific league
+    const subQuery = await GameDetailsModel.findAll({
+      attributes: [
+        "game_id",
+        [Sequelize.fn("SUM", Sequelize.col("buy_in_amount")), "total_buy_in"],
+      ],
+      where: { league_id: leagueId },
+      group: ["game_id"],
+      raw: true,
+    });
+
     const gamesCount = await GameModel.count({
       where: { league_id: leagueId },
     });
+    // Calculate the average total buy-ins per game
+    const avgTotalBuyInsPerGameForLeague = await sequelize.query(
+      `
+        SELECT 
+          ROUND(AVG(total_buy_in),2) AS average_buy_in_per_game
+        FROM 
+          (
+            SELECT 
+              game_id, 
+              SUM(buy_in_amount) AS total_buy_in
+            FROM 
+              GameDetails
+            WHERE 
+              league_id = ${leagueId}
+            GROUP BY 
+              game_id
+          ) AS game_totals;
+      `,
+      { type: Sequelize.QueryTypes.SELECT }
+    );
 
     const games = await GameModel.findAll({
       attributes: [
@@ -135,6 +166,8 @@ exports.getLeagueStats = async (req, res) => {
       totalHours: totalHours.toFixed(2),
       gamesCount: gamesCount,
       lastGame: lastGame,
+      avgTotalBuyInsPerGameForLeague:
+        avgTotalBuyInsPerGameForLeague[0]?.average_buy_in_per_game,
     });
   } catch (error) {
     console.error("Error calculating sum:", error);

@@ -373,6 +373,7 @@ exports.getAllGames = async (req, res) => {
         "updated_at",
         "isOpen",
         "game_manager_id",
+        "was_edited",
       ],
       include: [
         {
