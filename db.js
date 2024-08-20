@@ -29,7 +29,7 @@ const sequelize = new Sequelize(
       acquire: dbConfig.ACQUIRE,
       idle: dbConfig.IDLE,
     },
-    logging: true,
+    logging: false,
   }
 );
 console.log(`Using ${env} configuration`);
