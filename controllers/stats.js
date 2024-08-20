@@ -1,7 +1,5 @@
 const init = require("../models/init");
 const UserModel = require("../models/User");
-// const UserLeagueModel = require("../models/UserLeague");
-// const LeagueModel = require("../models/League");
 const GameDetailsModel = require("../models/GameDetails");
 const GameModel = require("../models/Game");
 const { Sequelize } = require("sequelize");
@@ -90,15 +88,15 @@ exports.getLeagueStats = async (req, res) => {
     });
 
     // Subquery to calculate the total buy-ins per game for the specific league
-    const subQuery = await GameDetailsModel.findAll({
-      attributes: [
-        "game_id",
-        [Sequelize.fn("SUM", Sequelize.col("buy_in_amount")), "total_buy_in"],
-      ],
-      where: { league_id: leagueId },
-      group: ["game_id"],
-      raw: true,
-    });
+    // const subQuery = await GameDetailsModel.findAll({
+    //   attributes: [
+    //     "game_id",
+    //     [Sequelize.fn("SUM", Sequelize.col("buy_in_amount")), "total_buy_in"],
+    //   ],
+    //   where: { league_id: leagueId },
+    //   group: ["game_id"],
+    //   raw: true,
+    // });
 
     const gamesCount = await GameModel.count({
       where: { league_id: leagueId },
@@ -114,7 +112,7 @@ exports.getLeagueStats = async (req, res) => {
               game_id, 
               SUM(buy_in_amount) AS total_buy_in
             FROM 
-              GameDetails
+              gameDetails
             WHERE 
               league_id = ${leagueId}
             GROUP BY 

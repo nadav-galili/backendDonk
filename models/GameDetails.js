@@ -2,7 +2,7 @@ const { DataTypes } = require("sequelize");
 const { sequelize } = require("../db");
 
 const GameDetails = sequelize.define(
-  "gameDetails",
+  "GameDetails",
   {
     id: {
       type: DataTypes.INTEGER,
@@ -31,7 +31,7 @@ const GameDetails = sequelize.define(
   },
   {
     sequelize,
-    modelName: "gameDetails",
+    modelName: "GameDetails",
     tableName: "gamedetails",
     timestamps: true,
     createdAt: "created_at",
