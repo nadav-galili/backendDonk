@@ -3,8 +3,9 @@
 require("dotenv").config();
 
 
+console.log("process.env.RDS_HOST", process.env.NODE_ENV);
 module.exports = {
-  ENV: process.env.NODE_ENV || "production", // Use environment variable or default to 'development'
+  ENV: process.env.NODE_ENV || "development", // Use environment variable or default to 'development'
 
   DB: {
     development: {
@@ -19,10 +20,10 @@ module.exports = {
       IDLE: 10000,
     },
     production: {
-      HOST: process.env.RDS_HOST,
-      PORT: 3306,
-      USERNAME: process.env.RDS_USER,
-      PASSWORD:process.env.RDS_PASS,
+      HOST: process.env.FREE_HOST,
+      PORT: process.env.FREE_PORT,
+      USERNAME: process.env.FREE_USER,
+      PASSWORD:process.env.FREE_PASS,
       NAME: "betDonk",
       MAX_POOL: 100,
       MIN_POOL: 10,

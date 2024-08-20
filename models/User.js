@@ -21,31 +21,57 @@ User.init(
       allowNull: false,
       primaryKey: true,
     },
+    google_id: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "",
+      unique: true,
+    },
     nickName: {
       type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "",
+    },
+    given_name: {
+      type: DataTypes.STRING,
       allowNull: true,
-      unique: true,
-      index: true,
-      validate: {
-        len: [2],
-      },
+    },
+    family_name: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     image: {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    expoPushToken:{
+    expoPushToken: {
       type: DataTypes.STRING,
       allowNull: true,
     },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    last_login: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+      onUpdate: DataTypes.NOW,
     },
     updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: DataTypes.NOW,
+    },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
     },
   },
   {

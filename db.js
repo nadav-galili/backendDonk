@@ -1,13 +1,12 @@
 const { Sequelize } = require("sequelize");
 const config = require("./config");
- 
+
 const AWS = require("aws-sdk");
 const env = config.ENV;
- 
+
 require("dotenv").config();
 
 const dbConfig = config.DB[env];
-
 
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID || config.AWS_ACCESS_KEY_ID,
@@ -30,7 +29,7 @@ const sequelize = new Sequelize(
       acquire: dbConfig.ACQUIRE,
       idle: dbConfig.IDLE,
     },
-    logging:false,
+    logging: true,
   }
 );
 console.log(`Using ${env} configuration`);

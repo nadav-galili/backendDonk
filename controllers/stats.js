@@ -21,20 +21,10 @@ exports.profitPerHour = async (req, res) => {
         "user_id",
         [Sequelize.fn("SUM", Sequelize.col("profit")), "totalProfit"],
         [
-          Sequelize.fn(
-            "SUM",
-            Sequelize.literal(
-              "TIMESTAMPDIFF(MINUTE, UserGames.created_at, UserGames.cash_out_time)/60"
-            )
+          Sequelize.literal(
+            "SUM(TIMESTAMPDIFF(MINUTE, UserGames.created_at, UserGames.cash_out_time))/60"
           ),
           "totalHours",
-        ],
-
-        [
-          Sequelize.literal(
-            "SUM(buy_ins_amount) / SUM(TIMESTAMPDIFF(MINUTE, UserGames.created_at, UserGames.cash_out_time)/60)"
-          ),
-          "buyInPerHour",
         ],
         [Sequelize.literal("SUM(buy_ins_amount)"), "totalBuyIns"],
       ],
@@ -48,13 +38,14 @@ exports.profitPerHour = async (req, res) => {
       group: ["user_id"],
     });
 
+    // Calculate buyInPerHour based on totalBuyIns and totalHours
     profitPerHour.forEach((player) => {
-      if (player.dataValues.buyInPerHour === 0) {
-        player.dataValues.buyInPerHour =
-          player.dataValues.buyInPerHour.toFixed(2);
-      }
+      const totalHours = parseFloat(player.dataValues.totalHours);
+      const totalBuyIns = parseFloat(player.dataValues.totalBuyIns);
+
+      player.dataValues.buyInPerHour =
+        totalHours !== 0 ? (totalBuyIns / totalHours).toFixed(2) : "N/A";
     });
-    // console.log("🚀 ~ exports.profitPerHour= ~ profitPerHour:", profitPerHour);
 
     if (!profitPerHour.length) {
       res.status(404).json("No data found");
@@ -67,11 +58,12 @@ exports.profitPerHour = async (req, res) => {
       const image = player["User"].image;
       let title =
         player.dataValues.totalHours !== 0
-          ? player.dataValues.totalProfit / player.dataValues?.totalHours
+          ? (
+              player.dataValues.totalProfit / player.dataValues.totalHours
+            ).toFixed(2)
           : "N/A";
       const subTitle = Number(player.dataValues.totalHours).toFixed(2);
-      const subTitle2 = Number(player.dataValues.buyInPerHour).toFixed(2);
-      title = Number(title).toFixed(2);
+      const subTitle2 = player.dataValues.buyInPerHour;
       return {
         id,
         nickName,
@@ -97,9 +89,40 @@ exports.getLeagueStats = async (req, res) => {
       where: { league_id: leagueId },
     });
 
+    // Subquery to calculate the total buy-ins per game for the specific league
+    const subQuery = await GameDetailsModel.findAll({
+      attributes: [
+        "game_id",
+        [Sequelize.fn("SUM", Sequelize.col("buy_in_amount")), "total_buy_in"],
+      ],
+      where: { league_id: leagueId },
+      group: ["game_id"],
+      raw: true,
+    });
+
     const gamesCount = await GameModel.count({
       where: { league_id: leagueId },
     });
+    // Calculate the average total buy-ins per game
+    const avgTotalBuyInsPerGameForLeague = await sequelize.query(
+      `
+        SELECT 
+          ROUND(AVG(total_buy_in),2) AS average_buy_in_per_game
+        FROM 
+          (
+            SELECT 
+              game_id, 
+              SUM(buy_in_amount) AS total_buy_in
+            FROM 
+              GameDetails
+            WHERE 
+              league_id = ${leagueId}
+            GROUP BY 
+              game_id
+          ) AS game_totals;
+      `,
+      { type: Sequelize.QueryTypes.SELECT }
+    );
 
     const games = await GameModel.findAll({
       attributes: [
@@ -143,6 +166,8 @@ exports.getLeagueStats = async (req, res) => {
       totalHours: totalHours.toFixed(2),
       gamesCount: gamesCount,
       lastGame: lastGame,
+      avgTotalBuyInsPerGameForLeague:
+        avgTotalBuyInsPerGameForLeague[0]?.average_buy_in_per_game,
     });
   } catch (error) {
     console.error("Error calculating sum:", error);
@@ -459,7 +484,7 @@ exports.getMainCardsStats = async (req, res) => {
         id: 1,
         title: "Total Profit",
         apiRoute: "totalProfit",
-        cardTitle: "Profit",
+        cardTitle: "Total Profit",
         subTitle: "Total Games",
         subTitle2: "Average Profit",
         values: formattedStats,
@@ -477,8 +502,7 @@ exports.getMainCardsStats = async (req, res) => {
         id: 3,
         title: "Profit Per Hour",
         apiRoute: "profitPerHour",
-        cardTitle: "Profit",
-
+        cardTitle: "Profit per hour",
         subTitle: "Hours Played",
         subTitle2: "Buy In Per Hour",
         values: formattedHighestProfitPerHour,
@@ -488,7 +512,6 @@ exports.getMainCardsStats = async (req, res) => {
         title: "Top 10 Comebacks",
         apiRoute: "top10Comebacks",
         cardTitle: "Profit",
-
         subTitle: "Buy In",
         subTitle2: "Date",
         values: formattedBiggestComeback,

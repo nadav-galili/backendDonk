@@ -7,10 +7,11 @@ const upload = userController.upload;
 
 // Signup route with image upload
 router.post("/signup", upload.single("image"), userController.signup);
-
+router.post('/googleSignin', userController.googleSignin);
 // Other routes
 router.post("/login", userController.login);
 router.get("/me", userController.me);
+router.get("/checkNotification/:userId", userController.checkNotification);
 router.get("/personalStats/:userId", auth, userController.personalStats);
 router.put(
   "/updatePersonaldetails",
@@ -19,4 +20,5 @@ router.put(
   userController.updatePersonaldetails
 );
 router.put("/updateExpoPushToken/:userId", auth, userController.expoPushTokens);
+router.put('/updateNotificationSettings/:userId', auth, userController.updateNotificationSettings);
 module.exports = router;

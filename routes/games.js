@@ -20,6 +20,12 @@ router.put("/cashOutPlayer", auth, gameController.cashOutPlayer);
 router.put("/endGame", auth, gameController.endGame);
 router.get("/getAllGamesForLeague/", auth, gameController.getAllGames);
 router.get("/checkIfOpenGameExist", auth, gameController.checkIfOpenGameExist);
-router.put("/addRemovePlayersFromGame", auth, gameController.addRemovePlayersFromGame);
+router.put(
+  "/addRemovePlayersFromGame",
+  auth,
+  gameController.addRemovePlayersFromGame
+);
 router.put("/takeControllOfGame", auth, gameController.takeControllOfGame);
+router.delete("/deleteGame", auth, gameController.deleteGame);
+router.put("/updateGameDetails", auth, gameController.updatedGameDetails);
 module.exports = router;
