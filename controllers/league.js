@@ -3,7 +3,10 @@ const init = require("../models/init");
 const UserModel = require("../models/User");
 const UserLeagueModel = require("../models/UserLeague");
 const LeagueModel = require("../models/League");
+const GameModel = require("../models/Game");
+const GameDetailsModel = require("../models/GameDetails");
 const { generateLeagueNumber } = require("../models/League");
+const { sequelize } = require("../db");
 const multer = require("multer");
 const { s3 } = require("../db");
 require("dotenv").config();
@@ -226,7 +229,11 @@ exports.getLeaguePlayersByLeagueId = async (req, res) => {
 
 exports.updateLeagueDetails = async (req, res) => {
   const { leagueId, leagueName, leaguePlayers } = req.body;
-  const parsedLeaguePlayers = JSON.parse(leaguePlayers);
+
+  const parsedLeaguePlayers = leaguePlayers?.leangth
+    ? JSON.parse(leaguePlayers)
+    : [];
+
   const { file } = req;
   try {
     const league = await LeagueModel.findByPk(leagueId);
@@ -235,6 +242,7 @@ exports.updateLeagueDetails = async (req, res) => {
     }
 
     let imageUrl = league.league_image;
+
     if (file) {
       imageUrl = await uploadImageToS3(file);
       imageUrl = imageUrl.split("leagueAvatars/");
@@ -246,6 +254,13 @@ exports.updateLeagueDetails = async (req, res) => {
         };
         await s3.deleteObject(params).promise();
       }
+    } else {
+      imageUrl = "leagueAvatars/league.jpg";
+      const params = {
+        Bucket: process.env.S3_BUCKET_NAME || config.S3_BUCKET_NAME,
+        Key: league.league_image,
+      };
+      await s3.deleteObject(params).promise();
     }
 
     await league.update({
@@ -258,7 +273,6 @@ exports.updateLeagueDetails = async (req, res) => {
     });
 
     ///check if all the players are in the league
-
     userLeagues.map(async (userLeague) => {
       if (
         !parsedLeaguePlayers.find(
@@ -277,6 +291,63 @@ exports.updateLeagueDetails = async (req, res) => {
       .json({ message: "League updated", league, status: 1 });
   } catch (error) {
     console.error("Error during updatePersonaldetails:", err);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+exports.deleteLeague = async (req, res) => {
+  const { leagueId } = req.params;
+
+  try {
+    await sequelize.transaction(async (transaction) => {
+      const league = await LeagueModel.findByPk(leagueId, { transaction });
+      if (!league) {
+        return res.status(404).json({ message: "League not found" });
+      }
+
+      const userLeagues = await UserLeagueModel.findAll({
+        where: { league_id: leagueId },
+        transaction,
+      });
+      const games = await GameModel.findAll({
+        where: { league_id: leagueId },
+        transaction,
+      });
+      const gamesDetails = await GameDetailsModel.findAll({
+        where: { league_id: leagueId },
+        transaction,
+      });
+
+      try {
+        await Promise.all(
+          userLeagues.map(async (userLeague) => {
+            await userLeague.destroy({ transaction });
+          }),
+          games.map(async (game) => {
+            await game.destroy({ transaction });
+          }),
+          gamesDetails.map(async (gameDetail) => {
+            await gameDetail.destroy({ transaction });
+          })
+        );
+
+        const params = {
+          Bucket: process.env.S3_BUCKET_NAME || config.S3_BUCKET_NAME,
+          Key: league.league_image,
+        };
+        await s3.deleteObject(params).promise({ transaction });
+
+        await league.destroy({ transaction });
+
+        return res.status(200).json({ message: "League deleted" });
+      } catch (error) {
+        console.error("Error during deleteLeague:", error);
+        await transaction.rollback();
+        res.status(500).json({ message: "Internal server error." });
+      }
+    });
+  } catch (error) {
+    console.error("Error during deleteLeague:", error);
     res.status(500).json({ message: "Internal server error." });
   }
 };
