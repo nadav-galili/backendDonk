@@ -589,3 +589,28 @@ exports.expoPushTokens = async function (req, res) {
     res.status(500).json({ message: "Internal server error." });
   }
 };
+
+exports.deleteAccount = async function (req, res) {
+  const { userId } = req.params;
+  try {
+    const user = await UserModel.findByPk(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    await user.update({
+      nickName: "Deleted User",
+      image: "uploads/anonymous.png",
+      given_name: "deleted",
+      family_name: "deleted",
+      email: `deleted-${userId}`,
+      google_id: `deleted-${userId}`,
+      expoPushToken: null,
+      is_active: false,
+    });
+
+    res.status(200).json({ message: "User deleted." });
+  } catch (err) {
+    console.error("Error during deleteAccount:", err);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
