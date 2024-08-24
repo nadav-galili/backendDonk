@@ -6,10 +6,7 @@ const { Sequelize } = require("sequelize");
 const UserGameModel = require("../models/UserGame");
 const dayjs = require("dayjs");
 const { sequelize } = require("../db");
-const {
-  calculateStreaks,
-  calculateWinnLossRatio,
-} = require("../utils/statsUtils");
+const { calculateUserStreaks } = require("../utils/statsUtils");
 
 exports.profitPerHour = async (req, res) => {
   const leagueId = req.params.leagueId;
@@ -86,17 +83,6 @@ exports.getLeagueStats = async (req, res) => {
     const sumResult = await GameDetailsModel.sum("buy_in_amount", {
       where: { league_id: leagueId },
     });
-
-    // Subquery to calculate the total buy-ins per game for the specific league
-    // const subQuery = await GameDetailsModel.findAll({
-    //   attributes: [
-    //     "game_id",
-    //     [Sequelize.fn("SUM", Sequelize.col("buy_in_amount")), "total_buy_in"],
-    //   ],
-    //   where: { league_id: leagueId },
-    //   group: ["game_id"],
-    //   raw: true,
-    // });
 
     const gamesCount = await GameModel.count({
       where: { league_id: leagueId },
@@ -704,13 +690,56 @@ exports.top10Comebacks = async (req, res) => {
   }
 };
 
+// exports.winningStreak = async (req, res) => {
+//   const leagueId = req.params.leagueId;
+
+//   try {
+//     const games = await UserGameModel.findAll({
+//       attributes: ["user_id", "game_id", "profit", "created_at"],
+//       where: { league_id: leagueId, profit: { [Sequelize.Op.gt]: 0 } },
+//       order: ["user_id", "game_id"],
+//       include: [
+//         {
+//           model: UserModel,
+//           attributes: ["id", "image", "nickName"],
+//         },
+//       ],
+//     });
+
+//     let streaks = calculateStreaks(games);
+
+//     streaks = await Promise.all(
+//       streaks.map(async (player) => {
+//         const ratio = await calculateWinnLossRatio(player.id, leagueId);
+//         return {
+//           ...player,
+//           subTitle2: ratio,
+//         };
+//       })
+//     );
+
+//     streaks.sort((a, b) => b.title.localeCompare(a.title));
+
+//     ///get
+//     res.status(200).json(streaks);
+//   } catch (error) {
+//     console.error("Error calculating streaks:", error);
+//     res.status(500).send("Error calculating streaks");
+//   }
+// };
+
 exports.winningStreak = async (req, res) => {
   const leagueId = req.params.leagueId;
 
   try {
     const games = await UserGameModel.findAll({
-      attributes: ["user_id", "game_id", "profit", "created_at"],
-      where: { league_id: leagueId, profit: { [Sequelize.Op.gt]: 0 } },
+      attributes: [
+        "user_id",
+        "game_id",
+        [Sequelize.fn("SUM", Sequelize.col("profit")), "total_profit"],
+      ],
+      where: { league_id: leagueId },
+      group: ["user_id", "game_id"],
       order: ["user_id", "game_id"],
       include: [
         {
@@ -719,25 +748,11 @@ exports.winningStreak = async (req, res) => {
         },
       ],
     });
+    const results = calculateUserStreaks(games);
 
-    let streaks = calculateStreaks(games);
-
-    streaks = await Promise.all(
-      streaks.map(async (player) => {
-        const ratio = await calculateWinnLossRatio(player.id, leagueId);
-        return {
-          ...player,
-          subTitle2: ratio,
-        };
-      })
-    );
-
-    streaks.sort((a, b) => b.title.localeCompare(a.title));
-
-    ///get
-    res.status(200).json(streaks);
+    res.status(200).json(results);
   } catch (error) {
-    console.error("Error calculating streaks:", error);
-    res.status(500).send("Error calculating streaks");
+    console.error("Error calculating new winning streak:", error);
+    res.status(500).send("Error calculating new winning streak");
   }
 };

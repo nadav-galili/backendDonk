@@ -10,8 +10,8 @@ const { s3 } = require("../db"); // Ensure s3 is correctly imported
 require("dotenv").config();
 const { OAuth2Client } = require("google-auth-library");
 const {
-  calculateStreaks,
   calculateWinnLossRatio,
+  calculateUserStreaks,
 } = require("../utils/statsUtils");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
@@ -316,15 +316,38 @@ exports.personalStats = async function (req, res) {
       return res.status(404).json({ message: "User not found." });
     }
 
+    // const userGames = await UserGameModel.findAll({
+    //   where: { user_id: userId },
+    //   include: [
+    //     {
+    //       model: LeagueModel,
+    //       attributes: ["league_name"],
+    //     },
+    //   ],
+    //   order: [["created_at", "DESC"]],
+    // });
+    // if (userGames.length === 0) {
+    //   return res.status(200).json({
+    //     message: "No games found.",
+    //     games: [],
+    //   });
+    // }
+
     const userGames = await UserGameModel.findAll({
+      attributes: [
+        "user_id",
+        "game_id",
+        [Sequelize.fn("SUM", Sequelize.col("profit")), "total_profit"],
+      ],
       where: { user_id: userId },
+      group: ["user_id", "game_id"],
       include: [
         {
-          model: LeagueModel,
-          attributes: ["league_name"],
+          model: UserModel,
+          attributes: ["id", "image", "nickName"],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: ["user_id", ["game_id", "ASC"]],
     });
     if (userGames.length === 0) {
       return res.status(200).json({
@@ -333,8 +356,7 @@ exports.personalStats = async function (req, res) {
       });
     }
 
-    // // Calculate streaks
-    const streaks = calculateStreaks(userGames);
+    const streaks = calculateUserStreaks(userGames);
 
     const getUserLeagues = await UserLeaguemodel.findAll({
       where: { user_id: userId },
