@@ -138,7 +138,7 @@ exports.personalUserStreak = (games) => {
 
   for (const game of games) {
     userId = game.user_id;
-    const profit = parseFloat(game.total_profit);
+    const profit = parseFloat(game?.dataValues?.total_profit);
 
     if (profit > 0) {
       currentStreak++;

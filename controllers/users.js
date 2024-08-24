@@ -12,6 +12,7 @@ const { OAuth2Client } = require("google-auth-library");
 const {
   calculateWinnLossRatio,
   calculateUserStreaks,
+  personalUserStreak,
 } = require("../utils/statsUtils");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
@@ -356,7 +357,7 @@ exports.personalStats = async function (req, res) {
       });
     }
 
-    const streaks = calculateUserStreaks(userStreak);
+    const streaks = personalUserStreak(userStreak);
 
     const getUserLeagues = await UserLeaguemodel.findAll({
       where: { user_id: userId },
