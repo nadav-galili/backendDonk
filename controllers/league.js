@@ -10,6 +10,7 @@ const { sequelize } = require("../db");
 const multer = require("multer");
 const { s3 } = require("../db");
 require("dotenv").config();
+const { Op } = require("sequelize");
 
 // Define multer storage utilsuration
 const storage = multer.memoryStorage();
@@ -220,6 +221,11 @@ exports.getLeaguePlayersByLeagueId = async (req, res) => {
         model: UserModel,
         attributes: ["id", "nickName", "image"],
         as: "User",
+        where: {
+          nickName: {
+            [Op.not]: "Deleted User",
+          },
+        },
       },
     ],
   });
