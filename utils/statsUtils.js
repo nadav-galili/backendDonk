@@ -151,8 +151,8 @@ exports.personalUserStreak = (games) => {
   return [
     {
       id: parseInt(userId),
-      title: maxStreak.toString(),
-      subTitle: currentStreak.toString(),
+      title: currentStreak.toString(),
+      subTitle: maxStreak.toString(),
     },
   ];
 };
