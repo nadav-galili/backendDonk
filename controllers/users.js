@@ -316,24 +316,24 @@ exports.personalStats = async function (req, res) {
       return res.status(404).json({ message: "User not found." });
     }
 
-    // const userGames = await UserGameModel.findAll({
-    //   where: { user_id: userId },
-    //   include: [
-    //     {
-    //       model: LeagueModel,
-    //       attributes: ["league_name"],
-    //     },
-    //   ],
-    //   order: [["created_at", "DESC"]],
-    // });
-    // if (userGames.length === 0) {
-    //   return res.status(200).json({
-    //     message: "No games found.",
-    //     games: [],
-    //   });
-    // }
-
     const userGames = await UserGameModel.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: LeagueModel,
+          attributes: ["league_name"],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+    if (userGames.length === 0) {
+      return res.status(200).json({
+        message: "No games found.",
+        games: [],
+      });
+    }
+
+    const userStreak = await UserGameModel.findAll({
       attributes: [
         "user_id",
         "game_id",
@@ -356,7 +356,7 @@ exports.personalStats = async function (req, res) {
       });
     }
 
-    const streaks = calculateUserStreaks(userGames);
+    const streaks = calculateUserStreaks(userStreak);
 
     const getUserLeagues = await UserLeaguemodel.findAll({
       where: { user_id: userId },
