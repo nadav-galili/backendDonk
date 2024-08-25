@@ -1,11 +1,8 @@
 const { Sequelize } = require("sequelize");
 const config = require("./config");
-
 const AWS = require("aws-sdk");
+
 const env = config.ENV;
-
-require("dotenv").config();
-
 const dbConfig = config.DB[env];
 
 AWS.config.update({
@@ -15,6 +12,14 @@ AWS.config.update({
   region: process.env.AWS_REGION || config.AWS_REGION,
 });
 
+let dialectOptions = {};
+if (dbConfig.USE_SSL) {
+  dialectOptions.ssl = {
+    rejectUnauthorized: true,
+    ca: process.env.DB_SSL_CA,
+  };
+}
+
 const sequelize = new Sequelize(
   dbConfig.NAME,
   dbConfig.USERNAME,
@@ -23,6 +28,7 @@ const sequelize = new Sequelize(
     host: dbConfig.HOST,
     port: dbConfig.PORT,
     dialect: "mysql",
+    dialectOptions: dialectOptions,
     pool: {
       max: dbConfig.MAX_POOL,
       min: dbConfig.MIN_POOL,
@@ -32,11 +38,13 @@ const sequelize = new Sequelize(
     logging: false,
   }
 );
+
 console.log(`Using ${env} configuration`);
-// Log the AWS configuration
+
 const s3 = new AWS.S3({
-  region: process.env.AWS_REGION, // Ensure the region is specified here
+  region: process.env.AWS_REGION,
 });
+
 console.log(`AWS Region: ${AWS.config.region}`);
-// console.log('sequelize',sequelize)
+
 module.exports = { s3, sequelize };
