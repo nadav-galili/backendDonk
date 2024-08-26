@@ -32,6 +32,8 @@ LeagueModel.belongsToMany(UserModel, {
   foreignKey: "league_id",
 });
 
+LeagueModel.belongsTo(UserModel, { foreignKey: "admin_id", as: "admin" });
+
 LeagueModel.hasMany(GameModel, { foreignKey: "league_id", as: "games" });
 GameModel.belongsTo(LeagueModel, { foreignKey: "league_id", as: "league" });
 

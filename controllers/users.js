@@ -281,7 +281,7 @@ exports.me = async function (req, res) {
 
 exports.login = async function (req, res) {
   let { google_id } = req.body;
-  console.log("🚀 ~ google_id:", google_id);
+
   try {
     const existingUser = await findUserByGoogleId(google_id);
     console.log("🚀 ~ existingUser:", existingUser);
