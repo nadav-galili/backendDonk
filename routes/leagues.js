@@ -4,7 +4,7 @@ const auth = require("../middleware/auth");
 const leagueController = require("../controllers/league");
 const upload = leagueController.upload;
 
-router.get("/myLeagues/:userId", auth, leagueController.myLeagues);
+router.get("/myLeagues/:userId", leagueController.myLeagues);
 
 router.post(
   "/createLeague",
