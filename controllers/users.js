@@ -112,6 +112,24 @@ exports.googleSignin = async function (req, res) {
   }
 };
 
+exports.dashGoogleSignin = async function (req, res) {
+  const { email } = req.body;
+  let user = await UserModel.findOne({
+    where: {
+      email: email,
+    },
+  });
+
+  if (!user) {
+    res.status(401).json({ error: "user not found on db" });
+  }
+  if (user) {
+    const token = generateSessionToken(user);
+    user.dataValues.token = token;
+    return res.status(200).json({ success: true, user });
+  }
+};
+
 exports.signup = async function (req, res) {
   const { nickName } = req.body;
 

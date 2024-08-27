@@ -26,4 +26,5 @@ router.put(
   userController.updateNotificationSettings
 );
 router.delete("/deleteAccount/:userId", auth, userController.deleteAccount);
+router.post("/dashGoogle", auth, userController.dashGoogleSignin);
 module.exports = router;
