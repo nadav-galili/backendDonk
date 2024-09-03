@@ -61,7 +61,9 @@ exports.googleSignin = async function (req, res) {
   const WEB_CLIENT_ID = process.env.GOOGLE_WEB_CLIENT_ID;
 
   const client = new OAuth2Client();
-  const { idToken } = req.body;
+  const { data } = req.body;
+  const idToken = data?.idToken;
+  if (!idToken) return res.status(400).json({ message: "idToken is required" });
 
   try {
     // Verify the ID token
@@ -299,6 +301,7 @@ exports.me = async function (req, res) {
 
 exports.login = async function (req, res) {
   let { google_id } = req.body;
+  console.log("🚀 ~ google_id:", google_id);
 
   try {
     const existingUser = await findUserByGoogleId(google_id);
