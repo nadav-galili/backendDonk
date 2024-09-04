@@ -26,8 +26,8 @@ router.get(
 
 router.put(
   "/updateLeagueDetails",
-  upload.single("image"),
   auth,
+  upload.single("image"),
   leagueController.updateLeagueDetails
 );
 
