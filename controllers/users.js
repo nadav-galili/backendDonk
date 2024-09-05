@@ -658,3 +658,20 @@ exports.deleteAccount = async function (req, res) {
     res.status(500).json({ message: "Internal server error." });
   }
 };
+
+exports.testUserDetails = async function (req, res) {
+  try {
+    const testUser = await UserModel.findOne({
+      where: {
+        email: "demodonkey596@gmail.com",
+      },
+    });
+    if (!testUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    res.status(200).json({ message: "Test user found.", testUser });
+  } catch (error) {
+    console.error("Error during testUserDetails:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};

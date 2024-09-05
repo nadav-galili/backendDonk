@@ -27,4 +27,5 @@ router.put(
 );
 router.delete("/deleteAccount/:userId", auth, userController.deleteAccount);
 router.post("/dashGoogle", userController.dashGoogleSignin);
+router.get("/testUserDetails", userController.testUserDetails);
 module.exports = router;

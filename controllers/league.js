@@ -286,7 +286,12 @@ exports.updateLeagueDetails = async (req, res) => {
         Bucket: process.env.S3_BUCKET_NAME || config.S3_BUCKET_NAME,
         Key: league.league_image,
       };
-      await s3.deleteObject(params).promise();
+      if (
+        league.league_image !== "leagueAvatars/league.jpg" ||
+        params.Key !== imageUrl
+      ) {
+        await s3.deleteObject(params).promise();
+      }
     }
 
     await league.update({
