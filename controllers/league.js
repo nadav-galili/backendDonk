@@ -122,6 +122,7 @@ exports.myLeagues = async (req, res) => {
 
 exports.createLeague = async (req, res) => {
   const { leagueName, userId } = req.body;
+
   let imageUrl = null;
   const { file } = req;
   if (file) {
@@ -129,39 +130,57 @@ exports.createLeague = async (req, res) => {
     imageUrl = imageUrl.split("leagueAvatars/");
     imageUrl = "leagueAvatars/" + imageUrl[1];
   }
+
   try {
-    const newLeague = await LeagueModel.create({
-      league_name: leagueName,
-      league_image: imageUrl ?? "leagueAvatars/league.jpg",
-      admin_id: userId,
-      league_number: await generateLeagueNumber(LeagueModel),
-    });
+    const result = await sequelize.transaction(async (transaction) => {
+      const newLeague = await LeagueModel.create(
+        {
+          league_name: leagueName,
+          league_image: imageUrl ?? "leagueAvatars/league.jpg",
+          admin_id: userId,
+          league_number: await generateLeagueNumber(LeagueModel),
+        },
+        { transaction }
+      );
 
-    const newUserLeague = await UserLeagueModel.create({
-      user_id: userId,
-      league_id: newLeague.id,
-      is_admin: true,
-    });
+      const newUserLeague = await UserLeagueModel.create(
+        {
+          user_id: userId,
+          league_id: newLeague.id,
+          is_admin: true,
+        },
+        { transaction }
+      );
 
-    //add anonymosplayer to the league
-    const anonymosPlayer = await UserModel.findOne({
-      where: { nickName: "Anonymous" },
-    });
+      const anonymousPlayer = await UserModel.findOne({
+        where: { nickName: "Anonymous" },
+        transaction,
+      });
 
-    await UserLeagueModel.create({
-      user_id: anonymosPlayer.id,
-      league_id: newLeague.id,
-      is_admin: false,
+      if (!anonymousPlayer) {
+        throw new Error("Anonymous player not found");
+      }
+
+      await UserLeagueModel.create(
+        {
+          user_id: anonymousPlayer.id,
+          league_id: newLeague.id,
+          is_admin: false,
+        },
+        { transaction }
+      );
+
+      return { newLeague, newUserLeague };
     });
 
     return res.status(200).json({
       message: "League created",
-      league: newLeague,
-      userLeague: newUserLeague,
+      league: result.newLeague,
+      userLeague: result.newUserLeague,
     });
   } catch (err) {
     console.error("Error during create league:", err);
-    res.status(500).json({ error: "Internal server error." });
+    return res.status(500).json({ error: "Internal server error." });
   }
 };
 
@@ -241,6 +260,7 @@ exports.updateLeagueDetails = async (req, res) => {
     : [];
 
   const { file } = req;
+
   try {
     const league = await LeagueModel.findByPk(leagueId);
     if (!league) {
@@ -266,7 +286,12 @@ exports.updateLeagueDetails = async (req, res) => {
         Bucket: process.env.S3_BUCKET_NAME || config.S3_BUCKET_NAME,
         Key: league.league_image,
       };
-      await s3.deleteObject(params).promise();
+      if (
+        league.league_image !== "leagueAvatars/league.jpg" ||
+        params.Key !== imageUrl
+      ) {
+        await s3.deleteObject(params).promise();
+      }
     }
 
     await league.update({
@@ -281,6 +306,7 @@ exports.updateLeagueDetails = async (req, res) => {
     ///check if all the players are in the league
     userLeagues.map(async (userLeague) => {
       if (
+        parsedLeaguePlayers.length > 0 &&
         !parsedLeaguePlayers.find(
           (player) => player.id === userLeague.dataValues.id
         )
@@ -291,6 +317,7 @@ exports.updateLeagueDetails = async (req, res) => {
         }
       }
     });
+    console.log("dfdf");
 
     return res
       .status(200)

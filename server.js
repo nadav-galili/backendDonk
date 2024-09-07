@@ -7,6 +7,7 @@ const games = require("./routes/games");
 const auth = require("./routes/auth");
 const stats = require("./routes/stats");
 const pushNotifications = require("./routes/pushNotifications");
+const admin = require("./routes/admin");
 const path = require("path");
 const app = express();
 
@@ -32,6 +33,7 @@ app.use(
   "/leagueAvatars",
   express.static(path.join(__dirname, "leagueAvatars"))
 );
+app.use("/api/admin", admin);
 
 const PORT = process.env.PORT || 3030;
 app.listen(PORT, () => {

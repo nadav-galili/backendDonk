@@ -61,7 +61,9 @@ exports.googleSignin = async function (req, res) {
   const WEB_CLIENT_ID = process.env.GOOGLE_WEB_CLIENT_ID;
 
   const client = new OAuth2Client();
-  const { idToken } = req.body;
+  const { data } = req.body;
+  const idToken = data?.idToken;
+  if (!idToken) return res.status(400).json({ message: "idToken is required" });
 
   try {
     // Verify the ID token
@@ -109,6 +111,24 @@ exports.googleSignin = async function (req, res) {
   } catch (error) {
     console.error("Error verifying Google token:", error);
     res.status(401).json({ success: false, message: "Invalid token" });
+  }
+};
+
+exports.dashGoogleSignin = async function (req, res) {
+  const { email } = req.body;
+  let user = await UserModel.findOne({
+    where: {
+      email: email,
+    },
+  });
+
+  if (!user) {
+    res.status(401).json({ error: "user not found on db" });
+  }
+  if (user) {
+    const token = generateSessionToken(user);
+    user.dataValues.token = token;
+    return res.status(200).json({ success: true, user });
   }
 };
 
@@ -282,6 +302,7 @@ exports.me = async function (req, res) {
 exports.login = async function (req, res) {
   let { google_id } = req.body;
   console.log("🚀 ~ google_id:", google_id);
+
   try {
     const existingUser = await findUserByGoogleId(google_id);
     console.log("🚀 ~ existingUser:", existingUser);
@@ -634,6 +655,23 @@ exports.deleteAccount = async function (req, res) {
     res.status(200).json({ message: "User deleted." });
   } catch (err) {
     console.error("Error during deleteAccount:", err);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+exports.testUserDetails = async function (req, res) {
+  try {
+    const testUser = await UserModel.findOne({
+      where: {
+        email: "demodonkey596@gmail.com",
+      },
+    });
+    if (!testUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    res.status(200).json({ message: "Test user found.", testUser });
+  } catch (error) {
+    console.error("Error during testUserDetails:", error);
     res.status(500).json({ message: "Internal server error." });
   }
 };

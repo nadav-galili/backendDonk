@@ -21,14 +21,13 @@ router.put(
 router.get(
   "/getLeaguePlayersByLeagueId/:leagueId",
   auth,
-
   leagueController.getLeaguePlayersByLeagueId
 );
 
 router.put(
   "/updateLeagueDetails",
-  upload.single("image"),
   auth,
+  upload.single("image"),
   leagueController.updateLeagueDetails
 );
 
