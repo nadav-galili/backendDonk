@@ -278,6 +278,7 @@ exports.updateLeagueDetails = async (req, res) => {
           Bucket: process.env.S3_BUCKET_NAME || config.S3_BUCKET_NAME,
           Key: league.league_image,
         };
+
         await s3.deleteObject(params).promise();
       }
     } else {
@@ -317,7 +318,6 @@ exports.updateLeagueDetails = async (req, res) => {
         }
       }
     });
-    console.log("dfdf");
 
     return res
       .status(200)
@@ -368,8 +368,10 @@ exports.deleteLeague = async (req, res) => {
           Bucket: process.env.S3_BUCKET_NAME || config.S3_BUCKET_NAME,
           Key: league.league_image,
         };
-        await s3.deleteObject(params).promise({ transaction });
-
+        console.log(league.league_image);
+        if (league.league_image !== "leagueAvatars/league.jpg") {
+          await s3.deleteObject(params).promise({ transaction });
+        }
         await league.destroy({ transaction });
 
         return res.status(200).json({ message: "League deleted" });
