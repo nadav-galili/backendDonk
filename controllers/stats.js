@@ -756,3 +756,38 @@ exports.winningStreak = async (req, res) => {
     res.status(500).send("Error calculating new winning streak");
   }
 };
+
+exports.getGlobalLeaderBoard = async (req, res) => {
+  try {
+    const leaderBoard = await UserGameModel.findAll({
+      attributes: [
+        "user_id",
+        [Sequelize.fn("sum", Sequelize.col("profit")), "totalProfit"],
+      ],
+      group: ["user_id"],
+      order: [[Sequelize.literal("totalProfit"), "DESC"]],
+      limit: 10,
+      include: [
+        {
+          model: UserModel,
+          attributes: ["nickName", "image"],
+        },
+      ],
+      raw: true,
+    });
+
+    const formattedLeaderBoard = leaderBoard.map((player) => {
+      return {
+        user_id: player.user_id,
+        totalProfit: Number(player.totalProfit),
+        nickName: player["User.nickName"],
+        image: player["User.image"],
+      };
+    });
+
+    return res.status(200).json(formattedLeaderBoard);
+  } catch (error) {
+    console.error("Error retrieving global leaderboard:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

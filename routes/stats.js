@@ -19,5 +19,5 @@ router.get(
 router.get("/profitPerHour/:leagueId", auth, statsController.profitPerHour);
 router.get("/top10Comebacks/:leagueId", auth, statsController.top10Comebacks);
 router.get("/winningStreak/:leagueId", auth, statsController.winningStreak);
-
+router.get("/getGlobalLeaderBoard", auth, statsController.getGlobalLeaderBoard);
 module.exports = router;
