@@ -2,6 +2,7 @@ const AdminModel = require("../models/Admin");
 const LeagueModel = require("../models/League");
 const UserModel = require("../models/User");
 const UserLeaguemodel = require("../models/UserLeague");
+const GamesModel = require("../models/Game");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
@@ -75,13 +76,19 @@ exports.getLeagues = async (req, res) => {
         {
           model: UserModel,
           as: "admin", // This should match the association alias in your League model
-          attributes: ["id", "nickName"], // Specify the User fields you want to include
+          attributes: ["id", "nickName", "image"], // Specify the User fields you want to include
           required: true, // This makes it an INNER JOIN
         },
       ],
-      // attributes: ["id", "league_name", "league_number", "league_image","created_at"], // Specify the League fields you want to include
     });
-    res.status(200).json(leagues);
+    //count leagues
+    const leagueCount = await LeagueModel.count();
+    //count users
+    const userCount = await UserModel.count();
+    const gamesCount = await GamesModel.count();
+
+    const leaguesData = { leagues, leagueCount, userCount, gamesCount };
+    res.status(200).json(leaguesData);
   } catch (error) {
     console.error("Error during getLeagues:", error);
     res.status(500).send("Internal server error");
@@ -98,7 +105,7 @@ exports.getLeagueDetails = async (req, res) => {
         {
           model: UserModel,
           as: "User", // This should match the association alias in your UserLeague model
-          attributes: ["id", "nickName"], // Specify the User fields you want to include
+          attributes: ["id", "nickName", "image"], // Specify the User fields you want to include
           required: true, // This makes it an INNER JOIN
         },
       ],
@@ -110,6 +117,16 @@ exports.getLeagueDetails = async (req, res) => {
     res.status(200).json(details);
   } catch (error) {
     console.error("Error during getLeagues:", error);
+    res.status(500).send("Internal server error");
+  }
+};
+
+exports.getUsers = async (req, res) => {
+  try {
+    const users = await UserModel.findAll();
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Error during getUsers:", error);
     res.status(500).send("Internal server error");
   }
 };

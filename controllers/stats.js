@@ -765,6 +765,9 @@ exports.getGlobalLeaderBoard = async (req, res) => {
         [Sequelize.fn("sum", Sequelize.col("profit")), "totalProfit"],
       ],
       group: ["user_id"],
+      having: Sequelize.where(Sequelize.fn("sum", Sequelize.col("profit")), {
+        [Sequelize.Op.gt]: 0,
+      }),
       order: [[Sequelize.literal("totalProfit"), "DESC"]],
       limit: 10,
       include: [

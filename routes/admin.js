@@ -11,5 +11,6 @@ router.get(
   adminAuth,
   adminController.getLeagueDetails
 );
+router.get("/getUsers", adminAuth, adminController.getUsers);
 
 module.exports = router;

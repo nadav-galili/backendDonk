@@ -85,8 +85,13 @@ exports.googleSignin = async function (req, res) {
 
     // Check if the user exists in your database
     let user = await findUserByGoogleId(userId);
+
     if (user) {
       //generate token
+      //update last_login
+      await user.update({
+        last_login: new Date(),
+      });
       const token = generateSessionToken(user);
       user.dataValues.token = token;
       return res.status(200).json({ message: "Signin successful", user });
@@ -152,7 +157,7 @@ exports.signup = async function (req, res) {
 
     const newUser = await UserModel.create({
       nickName,
-      image: imageUrl ?? "uploads/uanonymos.png",
+      image: imageUrl ?? "uploads/anonymous.png",
     });
 
     // Generate token
@@ -305,8 +310,9 @@ exports.login = async function (req, res) {
 
   try {
     const existingUser = await findUserByGoogleId(google_id);
-    console.log("🚀 ~ existingUser:", existingUser);
-
+    await existingUser.update({
+      last_login: new Date(),
+    });
     if (!existingUser) {
       return res.status(404).json({ error: "User not found." });
     }
