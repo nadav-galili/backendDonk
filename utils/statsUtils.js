@@ -1,5 +1,129 @@
 const Sequelize = require("sequelize");
 const UserGameModel = require("../models/UserGame");
+const UserLeagueModel = require("../models/UserLeague");
+const UserModel = require("../models/User");
+const dayjs = require("dayjs");
+
+exports.noGamesTotalProfitCard = async (leagueId) => {
+  const leaguePlayer = await UserLeagueModel.findAll({
+    include: [
+      {
+        model: UserModel,
+        attributes: ["id", "nickName", "image"],
+      },
+    ],
+    where: {
+      league_id: leagueId,
+    },
+  });
+
+  return leaguePlayer.map((player) => ({
+    id: player.user_id,
+    nickName: player.User.nickName,
+    image: player.User.image,
+    title: 0,
+    subTitle: 0,
+    subTitle2: 0,
+  }));
+};
+
+exports.noGamesLeagueObject = async (leagueId) => {
+  const leaguePlayer = await UserLeagueModel.findOne({
+    include: [
+      {
+        model: UserModel,
+        attributes: ["id", "nickName", "image"],
+      },
+    ],
+    where: {
+      league_id: leagueId,
+    },
+  });
+
+  const stats = [
+    {
+      id: 1,
+      title: "Total Profit",
+      apiRoute: "totalProfit",
+      cardTitle: "Total Profit",
+      subTitle: "Total Games",
+      subTitle2: "Average Profit",
+      values: {
+        id: leaguePlayer.user_id,
+        titleValue: "0",
+        subTitleValue: 0,
+        subTitle2Value: "0",
+        nickName: leaguePlayer?.User?.nickName,
+        image: leaguePlayer?.User?.image,
+      },
+    },
+    {
+      id: 2,
+      title: "Top 10 Profits",
+      apiRoute: "top10Profits",
+      cardTitle: "Profit",
+      subTitle: "Buy In",
+      subTitle2: "Date",
+      values: {
+        titleValue: 0,
+        subTitleValue: 0,
+        subTitle2Value: dayjs().format("DD/MM/YYYY"),
+        nickName: leaguePlayer?.User?.nickName,
+        image: leaguePlayer?.User?.image,
+      },
+    },
+    {
+      id: 3,
+      title: "Profit Per Hour",
+      apiRoute: "profitPerHour",
+      cardTitle: "Profit per hour",
+      subTitle: "Hours Played",
+      subTitle2: "Buy In Per Hour",
+      values: {
+        id: leaguePlayer.user_id,
+        nickName: leaguePlayer?.User?.nickName,
+        image: leaguePlayer?.User?.image,
+        titleValue: 0,
+        subTitleValue: "0",
+        subTitle2Value: "0.00",
+      },
+    },
+    {
+      id: 4,
+      title: "Top 10 Comebacks",
+      apiRoute: "top10Comebacks",
+      cardTitle: "Profit",
+      subTitle: "Buy In",
+      subTitle2: "Date",
+      values: {
+        id: leaguePlayer.user_id,
+        nickName: leaguePlayer?.User?.nickName,
+        image: leaguePlayer?.User?.image,
+        titleValue: 0,
+        subTitleValue: 0,
+        subTitle2Value: dayjs().format("DD/MM/YYYY"),
+      },
+    },
+    {
+      id: 5,
+      title: "Winning Streak",
+      apiRoute: "winningStreak",
+      cardTitle: "Max Streak",
+      subTitle: "Current Streak",
+      subTitle2: "Win Rate %",
+      values: {
+        id: leaguePlayer.user_id,
+        nickName: leaguePlayer?.User?.nickName,
+        image: leaguePlayer?.User?.image,
+        titleValue: 0,
+        subTitleValue: 0,
+        subTitle2Value: "0.00",
+      },
+    },
+  ];
+
+  return stats;
+};
 
 exports.calculateStreaks = (games) => {
   let results = [];
