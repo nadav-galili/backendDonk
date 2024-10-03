@@ -6,11 +6,24 @@ const { Sequelize } = require("sequelize");
 const UserGameModel = require("../models/UserGame");
 const dayjs = require("dayjs");
 const { sequelize } = require("../db");
-const { calculateUserStreaks } = require("../utils/statsUtils");
+const {
+  calculateUserStreaks,
+  noGamesLeagueObject,
+  noGamesTotalProfitCard,
+} = require("../utils/statsUtils");
 
 exports.profitPerHour = async (req, res) => {
   const leagueId = req.params.leagueId;
   try {
+    const countGamesForLeague = await GameModel.count({
+      where: { league_id: leagueId },
+    });
+
+    if (countGamesForLeague === 0) {
+      const noLeagueGames = await noGamesTotalProfitCard(leagueId);
+      res.status(200).json(noLeagueGames);
+      return;
+    }
     const profitPerHour = await UserGameModel.findAll({
       attributes: [
         "user_id",
@@ -215,7 +228,8 @@ exports.getMainCardsStats = async (req, res) => {
     });
 
     if (countGamesForLeague === 0) {
-      res.status(404).json("No games found");
+      const noLeagueGames = await noGamesLeagueObject(leagueId);
+      res.status(200).json(noLeagueGames);
       return;
     }
     const highestProfitPlayer = await UserGameModel.findOne({
@@ -520,6 +534,17 @@ exports.totalProfitForCard = async (req, res) => {
   const leagueId = req.params.leagueId;
 
   try {
+    const countGamesForLeague = await GameModel.count({
+      where: { league_id: leagueId },
+    });
+
+    if (countGamesForLeague === 0) {
+      const noGamesProfit = await noGamesTotalProfitCard(leagueId);
+      res.status(200).json(noGamesProfit);
+
+      return;
+    }
+
     const totalProfit = await UserGameModel.findAll({
       attributes: [
         "user_id",
@@ -582,6 +607,17 @@ exports.top10ProfitsForCard = async (req, res) => {
   const leagueId = req.params.leagueId;
 
   try {
+    const countGamesForLeague = await GameModel.count({
+      where: { league_id: leagueId },
+    });
+
+    if (countGamesForLeague === 0) {
+      const noGamesProfit = await noGamesTotalProfitCard(leagueId);
+      res.status(200).json(noGamesProfit);
+
+      return;
+    }
+
     const top10Profits = await UserGameModel.findAll({
       attributes: [
         "user_id",
@@ -639,6 +675,16 @@ exports.top10Comebacks = async (req, res) => {
   const leagueId = req.params.leagueId;
 
   try {
+    const countGamesForLeague = await GameModel.count({
+      where: { league_id: leagueId },
+    });
+
+    if (countGamesForLeague === 0) {
+      const noGamesProfit = await noGamesTotalProfitCard(leagueId);
+      res.status(200).json(noGamesProfit);
+
+      return;
+    }
     const top10Comebacks = await UserGameModel.findAll({
       attributes: [
         "user_id",
@@ -732,6 +778,16 @@ exports.winningStreak = async (req, res) => {
   const leagueId = req.params.leagueId;
 
   try {
+    const countGamesForLeague = await GameModel.count({
+      where: { league_id: leagueId },
+    });
+
+    if (countGamesForLeague === 0) {
+      const noGamesProfit = await noGamesTotalProfitCard(leagueId);
+      res.status(200).json(noGamesProfit);
+
+      return;
+    }
     const games = await UserGameModel.findAll({
       attributes: [
         "user_id",
