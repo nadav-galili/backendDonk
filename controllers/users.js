@@ -16,6 +16,7 @@ const {
 } = require("../utils/statsUtils");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const { sendMessageToTelegram } = require("../utils/telegramUtils"); // Import the function
 
 // Define multer storage utilsuration
 const storage = multer.memoryStorage();
@@ -85,6 +86,8 @@ exports.googleSignin = async function (req, res) {
 
     // Check if the user exists in your database
     let user = await findUserByGoogleId(userId);
+
+    await sendMessageToTelegram(`User ${name} (ID: ${userId}) has logged in.`);
 
     if (user) {
       //generate token
@@ -306,18 +309,21 @@ exports.me = async function (req, res) {
 
 exports.login = async function (req, res) {
   let { google_id } = req.body;
-  console.log("🚀 ~ google_id:", google_id);
 
   try {
+    if (!google_id) {
+      return res.status(400).json({ error: "Google ID is required." });
+    }
     const existingUser = await findUserByGoogleId(google_id);
-    await existingUser.update({
-      last_login: new Date(),
-    });
     if (!existingUser) {
       return res.status(404).json({ error: "User not found." });
     }
 
-    //generate token
+    await existingUser.update({
+      last_login: new Date(),
+    });
+
+    // Generate token
     const jwtKey = process.env.JWTKEY;
     const token = jwt.sign(
       {
@@ -326,6 +332,11 @@ exports.login = async function (req, res) {
         image: existingUser.image,
       },
       jwtKey
+    );
+
+    // Send Telegram notification
+    await sendMessageToTelegram(
+      `User ${existingUser.nickName} (ID: ${existingUser.id}) has logged in.`
     );
 
     res.status(200).json({ token });
@@ -680,4 +691,12 @@ exports.testUserDetails = async function (req, res) {
     console.error("Error during testUserDetails:", error);
     res.status(500).json({ message: "Internal server error." });
   }
+};
+
+exports.userRestored = async function (req, res) {
+  const { nickName, userId } = req.body;
+  await sendMessageToTelegram(
+    `User ${nickName} (ID: ${userId}) has been restored.`
+  );
+  res.status(200).json({ message: "User restored." });
 };
