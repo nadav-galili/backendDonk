@@ -347,6 +347,7 @@ exports.endGame = async (req, res) => {
 
 exports.getAllGames = async (req, res) => {
   const { leagueId, continuationToken, startDate, endDate } = req.query;
+
   let createdAt = startDate ?? dayJs().startOf("year").toDate();
   let endAt = endDate ?? dayJs().toDate();
 
@@ -391,6 +392,23 @@ exports.getAllGames = async (req, res) => {
             {
               model: UserModel,
               as: "User",
+              attributes: ["id", "nickName", "image"],
+            },
+          ],
+        },
+        {
+          model: GameDetailsModel, // Include GameDetailsModel
+          as: "gameDetails", // Use the correct alias defined in your association
+          attributes: ["buy_in_amount", "created_at", "user_id"], // Specify the attributes you want
+          where: {
+            buy_in_amount: {
+              [Sequelize.Op.gt]: 0,
+            },
+          },
+          include: [
+            {
+              model: UserModel,
+              as: "User", // Include UserModel for each game detail
               attributes: ["id", "nickName", "image"],
             },
           ],
